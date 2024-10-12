@@ -1,0 +1,9 @@
+#define PROGRAM_NAME "@progname@"
+#define PROGRAM_VERSION "@prog_version@"
+
+#mesondefine HAVE_LIBJPEG
+#mesondefine HAVE_LIBPNG
+#mesondefine HAVE_LIBEXIF
+#mesondefine HAVE_LIBLCMS2
+#medondefine HAVE_LIBBMP
+
