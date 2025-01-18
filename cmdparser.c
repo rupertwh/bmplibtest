@@ -27,16 +27,52 @@
 #include "cmdparser.h"
 
 
+/*
+ * a simple parser for test definitions.
+ *
+ * Test definitions consist of a string that contains a series of commands
+ * to execute.
+ *
+ * A single command has the form:
+ *     <command-name>{<arg1>,<arg2>,<arg3name>:<arg3val>,<arg4name>:<arg4val>,...};
+ *
+ * Arguments can be simple strings (<arg1> and <arg2> in the example) or key/value pairs,
+ * separated by a colon (:).
+ *
+ * e.g.  loadbmp{sample,picture.bmp};
+ *
+ * or    name{Load 4-bit RLE};
+ *       loadbmp{sample,g/pal4rle.bmp};
+ *       loadpng{ref,ref_8bit_12c_alpha.png};
+ *       compare{}
+ *
+ * or    name    {Load 24-bit RGB + Save}
+ *       loadbmp {sample, g/rgb24.bmp}; loadpng {ref, ref_8bit_255c.png}
+ *       compare { }
+ *       savebmp {tmp, rgb24out.bmp}; loadbmp{tmp, rgb24out.bmp}
+ *       compare { }
+ *
+ * or    name    {Load 64-bit RGB s2.13}
+ *       loadbmp {sample, q/rgba64.bmp, format:s2.13, conv64:srgb}
+ *       savebmp {tmp, rgb64s2.13lin-to-24.bmp, format:int, bufferbits:8}
+ *
+ * all whitespace (including newlines) around commands and arguments will be
+ * trimmed, the semicolon is optional
+ *
+ */
+
+
+
 
 #define WHITESPACE " \t\n\r"
 #define CMDSEP ";"
 #define ARGSEP ","
-
-
-
+#define VALSEP ':'
 
 
 static const int parse_ignore(const char *str, const char *ignore);
+static char* rtrim(char *str, int len);
+static void split_arg(struct Cmdarg *arg);
 
 
 bool next_command(const char **list, char *cmd, int size)
@@ -56,7 +92,7 @@ bool next_command(const char **list, char *cmd, int size)
 
 bool arglist_from_cmdstr(const char **cmdstr, char *buf, int size, struct Cmdarg **arglist)
 {
-	int             total = 0;
+	int total = 0;
 
 	*cmdstr += parse_ignore(*cmdstr, WHITESPACE);
 
@@ -97,13 +133,13 @@ bool arglist_from_cmdstr(const char **cmdstr, char *buf, int size, struct Cmdarg
 		}
 
 		(*arglist)->arg = (char*)*arglist + sizeof **arglist;
+
 		strncpy((*arglist)->arg, *cmdstr, len);
 		(*arglist)->arg[len] = 0;
+		rtrim((*arglist)->arg, len);
+		(*arglist)->val = NULL;
 
-		for (int i = len - 1; i >= 0; i--) {
-			if (strchr(WHITESPACE, (unsigned char)(*arglist)->arg[i]))
-				(*arglist)->arg[i] = 0;
-		}
+		split_arg(*arglist);
 
 		arglist = &(*arglist)->next;
 		*cmdstr += len;
@@ -115,7 +151,38 @@ bool arglist_from_cmdstr(const char **cmdstr, char *buf, int size, struct Cmdarg
 	return true;
 }
 
+static void split_arg(struct Cmdarg *arg)
+{
+	int n;
 
+	for (int i = 0; arg->arg[i]; i++) {
+		if (arg->arg[i] == VALSEP) {
+
+			arg->arg[i] = 0;
+			rtrim(arg->arg, i);
+
+			arg->val = arg->arg + i + 1;
+			for (n = 0; arg->val[n] && strchr(WHITESPACE, (unsigned char)arg->val[n]); n++)
+				;
+			arg->val += n;
+			break;
+		}
+	}
+}
+
+static char* rtrim(char *str, int len)
+{
+	if (len == 0)
+		len = strlen(str);
+
+	for (int i = len - 1; i >= 0; i--) {
+		if (strchr(WHITESPACE, (unsigned char)str[i]))
+			str[i] = 0;
+		else
+			break;
+	}
+	return str;
+}
 
 static const int parse_ignore(const char *str, const char *ignore)
 {

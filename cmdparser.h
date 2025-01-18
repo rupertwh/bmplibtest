@@ -20,6 +20,7 @@
 
 struct Cmdarg {
 	char          *arg;
+	char          *val;
 	struct Cmdarg *next;
 };
 

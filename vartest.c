@@ -344,11 +344,16 @@ int main(int argc, char *argv[])
 							struct Cmdarg *a;
 							printf("-+'%s'\n", cmdname);
 							for (a = args; a != NULL; a = a->next) {
-								printf(" +--'%s'\n", a->arg);
+								if (a->val)
+									printf(" +--'%s':'%s'\n", a->arg, a->val);
+								else
+									printf(" +--'%s'\n", a->arg);
 							}
 						}
-						if (!perform(cmdname, args))
+						if (!perform(cmdname, args)) {
 							failed = true;
+							break;
+						}
 					}
 				} else {
 					printf("**Error splitting args\n");
@@ -361,6 +366,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 		} while (*cmdstr);
+
 		if (failed) {
 			bad++;
 			printf("****failed\n");
@@ -462,13 +468,12 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	}
 
 	while (args && args->arg) {
-		optname = args->arg;
-		optvalue = strchr(optname, ':');
+		optname  = args->arg;
+		optvalue = args->val;
 		if (!optvalue) {
 			printf("loadbmp: invalid option '%s'\n", optname);
 			goto abort;
 		}
-		*optvalue++ = 0;
 
 		if (!strcmp(optname, "line")) {
 			if (!strcmp(optvalue, "whole"))
@@ -690,13 +695,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 	}
 
 	while (args && args->arg) {
-		optname = args->arg;
-		optvalue = strchr(optname, ':');
+		optname  = args->arg;
+		optvalue = args->val;
 		if (!optvalue) {
 			printf("savebmp: invalid option '%s'\n", optname);
 			goto abort;
 		}
-		*optvalue++ = 0;
 
 		if (!strcmp(optname, "bufferbits")) {
 			bufferbits = atol(optvalue);
@@ -915,10 +919,8 @@ static bool perform_exposure(struct Cmdarg *args)
 
 
 	while (args && args->arg) {
-		opt = args->arg;
-		optval = strchr(opt, ':');
-		if (optval)
-			*optval++ = 0;
+		opt    = args->arg;
+		optval = args->val;
 
 		if (!strcmp(opt, "fstops")) {
 			fstops = atof(optval);
@@ -1095,8 +1097,6 @@ static void convert_gamma(double (*func)(double))
 		}
 	}
 }
-
-
 
 
 static void set_exposure(double fstops, int symmetric)
