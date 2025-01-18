@@ -312,10 +312,14 @@ static struct Image* pngfile_read(FILE *file);
 
 int main(int argc, char *argv[])
 {
-	int          numtest;
-	int          bad = 0, good = 0;
+	int  numtest;
+	int  bad = 0, good = 0;
+	bool verbose = false;
 
 	numtest = sizeof testdef / sizeof testdef[0];
+
+	if (argc >= 2 && !strcmp(argv[1], "-v"))
+		verbose = true;
 
 	for (int i = 0; i < numtest; i++) {
 		bool        failed = false;
@@ -336,6 +340,13 @@ int main(int argc, char *argv[])
 						if (first)
 							printf("%s\n", args ? args->arg : "(none)");
 					} else {
+						if (verbose) {
+							struct Cmdarg *a;
+							printf("-+'%s'\n", cmdname);
+							for (a = args; a != NULL; a = a->next) {
+								printf(" +--'%s'\n", a->arg);
+							}
+						}
 						if (!perform(cmdname, args))
 							failed = true;
 					}
