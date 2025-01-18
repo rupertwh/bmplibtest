@@ -32,6 +32,7 @@
 
 #include "imgstack.h"
 #include "cmdparser.h"
+#include "cmdline.h"
 
 const char sampledir[] = "/home/rw/source/bmpsuite-2.8/";
 const char refdir[]    = "/home/rw/source/bmplibtest/refs/";
@@ -308,26 +309,43 @@ static void set_exposure(double fstops, int symmetric);
 static struct Image* pngfile_read(FILE *file);
 
 
-
+struct Cmdline cmdline;
 
 int main(int argc, char *argv[])
 {
-	int  numtest;
-	int  bad = 0, good = 0;
-	bool verbose = false;
+	int    numtest;
+	int    bad = 0, good = 0;
+
+	memset(&cmdline, 0, sizeof cmdline);
+
+	if (!cmd_parse(argc, argv, &cmdline))
+		return 1;
+
+	if (cmdline.help) {
+		cmd_usage();
+		return 0;
+	}
 
 	numtest = sizeof testdef / sizeof testdef[0];
-
-	if (argc >= 2 && !strcmp(argv[1], "-v"))
-		verbose = true;
 
 	for (int i = 0; i < numtest; i++) {
 		bool        failed = false;
 		bool        first  = true;
 		const char *cmdstr = testdef[i];
 
+		if (cmdline.nfiles) {
+			int j;
+			for (j = 0; j < cmdline.nfiles; j++) {
+				if (i == atol(cmdline.file[j]))
+					break;
+			}
+			if (j == cmdline.nfiles)
+				continue;
+		}
+
 		imgstack_clear();
-		printf("\n===== Test %02d: ", i);
+		if (cmdline.verbose > 0)
+			printf("\n===== Test %02d: ", i);
 
 		do {
 			char cmdname[160];
@@ -337,10 +355,10 @@ int main(int argc, char *argv[])
 
 				if (arglist_from_cmdstr(&cmdstr, argbuf, sizeof argbuf, &args)) {
 					if (!strcmp(cmdname, "name")) {
-						if (first)
+						if (first && cmdline.verbose > 0)
 							printf("%s\n", args ? args->arg : "(none)");
 					} else {
-						if (verbose) {
+						if (cmdline.verbose > 1) {
 							struct Cmdarg *a;
 							printf("-+'%s'\n", cmdname);
 							for (a = args; a != NULL; a = a->next) {
@@ -369,16 +387,20 @@ int main(int argc, char *argv[])
 
 		if (failed) {
 			bad++;
-			printf("****failed\n");
+			if (cmdline.verbose > 0)
+				printf("****failed\n");
 		}
 		else {
 			good++;
-			printf("----passed\n");
+			if (cmdline.verbose > 0)
+				printf("----passed\n");
 		}
 	}
 
-	printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
+	if (cmdline.verbose > -1)
+		printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
 	imgstack_destroy();
+	cmd_free(&cmdline);
 	return bad;
 }
 
@@ -620,7 +642,8 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		}
 	}
 
-	printf("Image %s loaded\n", path);
+	if (cmdline.verbose > 1)
+		printf("Image %s loaded\n", path);
 	bmp_free(h); h = NULL;
 	fclose(file); file = NULL;
 

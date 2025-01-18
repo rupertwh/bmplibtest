@@ -34,4 +34,5 @@ executable('vartest',
            'vartest.c',
            'imgstack.c',
            'cmdparser.c',
+           'cmdline.c',
            dependencies: [bmpdep, pngdep, mathdep])

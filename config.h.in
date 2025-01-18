@@ -5,5 +5,5 @@
 #mesondefine HAVE_LIBPNG
 #mesondefine HAVE_LIBEXIF
 #mesondefine HAVE_LIBLCMS2
-#medondefine HAVE_LIBBMP
+#mesondefine HAVE_LIBBMP
 
