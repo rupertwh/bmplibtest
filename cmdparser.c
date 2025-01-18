@@ -99,6 +99,12 @@ bool arglist_from_cmdstr(const char **cmdstr, char *buf, int size, struct Cmdarg
 		(*arglist)->arg = (char*)*arglist + sizeof **arglist;
 		strncpy((*arglist)->arg, *cmdstr, len);
 		(*arglist)->arg[len] = 0;
+
+		for (int i = len - 1; i >= 0; i--) {
+			if (strchr(WHITESPACE, (unsigned char)(*arglist)->arg[i]))
+				(*arglist)->arg[i] = 0;
+		}
+
 		arglist = &(*arglist)->next;
 		*cmdstr += len;
 		if (strchr(ARGSEP, **cmdstr))
