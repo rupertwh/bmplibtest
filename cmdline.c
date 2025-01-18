@@ -4,14 +4,13 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <stdarg.h>
-#include <arpa/inet.h>
-
+#include <stdbool.h>
 
 #include "config.h"
 
 #include "cmdline.h"
 
-#define MAX(a,b) (a)>(b)?(a):(b)
+#define MAX(a, b) (a) > (b) ? (a) : (b)
 
 enum Optnum {
 	OP_VERBOSE,
@@ -21,33 +20,30 @@ enum Optnum {
 
 struct Option {
 	const enum Optnum op;
-	const int	      shortname;
-	const char	     *longname;
-	const int	      has_arg;
+	const int         shortname;
+	const char       *longname;
+	const int         has_arg;
 } s_options[] = {
-	{ OP_VERBOSE,         'v', "verbose",         0 },
-	{ OP_QUIET,           'q', "quiet",           0 },
-	{ OP_HELP,            '?', "help",            0 },
+	{ OP_VERBOSE, 'v', "verbose", 0 },
+	{ OP_QUIET,   'q', "quiet",   0 },
+	{ OP_HELP,    '?', "help",    0 },
 };
 
 
-
-static int s_current_arg, s_argc;
+static int    s_current_arg, s_argc;
 static char **s_argv;
 
-static int next_arg(const char **parg);
-
-static int do_opt(int op, struct Cmdline *cmdline);
-static int do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline);
-static int add_file(struct Cmdline *cmdline, const char *arg);
-
+static bool next_arg(const char **parg);
+static bool do_opt(int op, struct Cmdline *cmdline);
+static bool do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline);
+static bool add_file(struct Cmdline *cmdline, const char *arg);
 
 
 /********************************************************
  * 	do_opt
  *******************************************************/
 
-static int do_opt(int op, struct Cmdline *cmdline)
+static bool do_opt(int op, struct Cmdline *cmdline)
 {
 	switch (s_options[op].op) {
 		case OP_VERBOSE:
@@ -59,14 +55,14 @@ static int do_opt(int op, struct Cmdline *cmdline)
 			break;
 
 		case OP_HELP:
-			cmdline->help = 1;
+			cmdline->help = true;
 			break;
 
 		default:
 			fprintf(stderr, "do_opt(): Impossible option %s!\n", s_options[op].longname);
-			return 0;
+			return false;
 	}
-	return 1;
+	return true;
 }
 
 
@@ -75,28 +71,28 @@ static int do_opt(int op, struct Cmdline *cmdline)
  * 	do_opt_arg
  *******************************************************/
 
-static int do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline)
+static bool do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline)
 {
 	char *endptr = NULL;
 
 	if (!*arg) {
 		fprintf(stderr, "Missing argument to --%s option: '%s'\n", s_options[op].longname, arg);
-		return 0;
+		return false;
 	}
 
 	switch (s_options[op].op) {
 
 		default:
 			fprintf(stderr, "do_opt_arg(): Impossible option %s!\n", s_options[op].longname);
-			return 0;
+			return false;
 	}
 
 	if (endptr && *endptr != '\0') {
 		fprintf(stderr, "Invalid numerical argument to --%s option: '%s'\n", s_options[op].longname, arg);
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
 
@@ -105,10 +101,11 @@ static int do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdl
  * 	cmd_parse
  *******************************************************/
 
-int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
+bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 {
 	const char       *arg = NULL, *equalsign;
-	int               i, op, rest_is_args = 0;
+	int               i, op;
+	bool              rest_is_args = false;
 	static const int  opnum = sizeof s_options / sizeof s_options[0];
 	size_t            comparelen;
 
@@ -126,7 +123,7 @@ int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 				arg++;
 
 				if (!*arg) {
-					rest_is_args = 1;
+					rest_is_args = true;
 					continue;
 				}
 				equalsign = strchr(arg, '=');
@@ -134,7 +131,7 @@ int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 
 				for (i = 0, op = opnum; i < opnum; i++) {
 					if (s_options[i].longname && !strncmp(arg, s_options[i].longname,
-														  MAX(comparelen, strlen(s_options[i].longname)))) {
+					                             MAX(comparelen, strlen(s_options[i].longname)))) {
 						op = i;
 						break;
 					}
@@ -143,7 +140,6 @@ int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 					fprintf(stderr, "Unknown option --%s\n", arg);
 					goto abort;
 				}
-
 
 				if (s_options[op].has_arg) {
 					/* long option with argument */
@@ -154,24 +150,22 @@ int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 					}
 					arg = equalsign + 1;
 
-					if (!do_opt_arg(arg, op, 1, cmdline)) {
+					if (!do_opt_arg(arg, op, 1, cmdline))
 						goto abort;
-					}
-				}
-				else {
+
+				} else {
 					/* long option without argument */
 					if (equalsign) {
 						fprintf(stderr, "Option --%s cannot have an argument!\n", s_options[op].longname);
 						goto abort;
 					}
 
-					if (!do_opt(op, cmdline)) {
+					if (!do_opt(op, cmdline))
 						goto abort;
-					}
+
 				}
 
-			}
-			else {
+			} else {
 				/*short option(s) */
 				while (*arg) {
 					for (i = 0, op = opnum; i < opnum; i++) {
@@ -196,28 +190,24 @@ int cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 						if (!do_opt_arg(arg, op, 0, cmdline))
 							goto abort;
 						break; /* no more options after an arg */
-					}
-					else {
+					} else {
 						if (!do_opt(op, cmdline))
 							goto abort;
 					}
 				}
 			}
-		}
-		else {  /* non-option argument */
+
+		} else {  /* non-option argument */
 			if (!add_file(cmdline, arg))
 				goto abort;
 		}
 	}
-
-
-	return 1;
+	return true;
 
 abort:
 	/*fprintf(stderr, "Invalid argument '%s'\n", arg);*/
 	cmd_free(cmdline);
-	return 0;
-
+	return false;
 }
 
 
@@ -264,16 +254,12 @@ void cmd_usage(void)
 	printf("\t\t-%c\tverbose, print detailed information\n", s_options[OP_VERBOSE].shortname);
 	printf("\t\t-%c%c\tsuper verbose, print lots and lots of info\n\n",
 	                                                         s_options[OP_VERBOSE].shortname,
-	   	                                                     s_options[OP_VERBOSE].shortname);
-
-
+	                                                         s_options[OP_VERBOSE].shortname);
 
 	printf("\t-%c, --%s\n", s_options[OP_HELP].shortname,
 	                        s_options[OP_HELP].longname);
 	printf("\t\tPrint this help screen.\n\n");
 }
-
-
 
 
 
@@ -283,10 +269,8 @@ void cmd_usage(void)
 
 void cmd_free(struct Cmdline *cmdline)
 {
-	int i;
-
 	if (cmdline->file) {
-		for (i = 0; i < cmdline->nfiles; i++) {
+		for (int i = 0; i < cmdline->nfiles; i++) {
 			if (cmdline->file[i]) {
 				free(cmdline->file[i]);
 				cmdline->file[i] = NULL;
@@ -296,7 +280,6 @@ void cmd_free(struct Cmdline *cmdline)
 		free(cmdline->file);
 		cmdline->file = NULL;
 	}	
-
 }
 
 
@@ -305,21 +288,21 @@ void cmd_free(struct Cmdline *cmdline)
  * 	add_file
  *******************************************************/
 
-static int add_file(struct Cmdline *cmdline, const char *arg)
+static bool add_file(struct Cmdline *cmdline, const char *arg)
 {
-	char       **tmp;
-	static int   nalloc = 0, newsize;
-	const int    inc = 5;
+	char      **tmp;
+	static int  nalloc = 0, newsize;
+	const int   inc = 5;
 
 	if (nalloc < cmdline->nfiles + 1) {
 		if (nalloc >= INT_MAX - inc) {
 			perror("add_file() crazy big memory needed!");
-			return 0;
+			return false;
 		}
 		tmp = realloc(cmdline->file, (newsize = nalloc + inc) * sizeof *cmdline->file);
 		if (!tmp) {
 			perror("add_file()");
-			return 0;
+			return false;
 		}
 		nalloc = newsize;
 		cmdline->file = tmp;
@@ -327,12 +310,12 @@ static int add_file(struct Cmdline *cmdline, const char *arg)
 
 	if (!(cmdline->file[cmdline->nfiles] = malloc(strlen(arg) + 1))) {
 		perror("add_file() malloc()");
-		return 0;
+		return false;
 	}
 
 	strcpy(cmdline->file[cmdline->nfiles++], arg);
 
-	return 1;
+	return true;
 }
 
 
@@ -341,15 +324,14 @@ static int add_file(struct Cmdline *cmdline, const char *arg)
  * 	next_arg
  *******************************************************/
 
-static int next_arg(const char **parg)
+static bool next_arg(const char **parg)
 {
 	if (!parg)
-		return 0;
+		return false;
 
 	if (++s_current_arg >= s_argc)
-		return 0;
+		return false;
 
 	*parg = s_argv[s_current_arg];
-	return 1;
+	return true;
 }
-

@@ -1,0 +1,63 @@
+# For more information, see:
+#
+#   https://clang.llvm.org/docs/ClangFormat.html
+#   https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+#
+---
+
+BasedOnStyle: WebKit
+
+SortIncludes: false
+
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignCompound: true
+  AlignFunctionPointers: false
+  PadOperators: false
+AlignConsecutiveBitFields: AcrossComments
+AlignConsecutiveDeclarations: AcrossComments
+AlignConsecutiveMacros: AcrossComments
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCaseColons: true
+AlignEscapedNewlines: LeftWithLastLine
+AlignOperands: Align
+
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+
+BinPackArguments: true
+BinPackParameters: true
+
+BitFieldColonSpacing: After
+
+BreakAfterReturnType: Automatic
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Linux
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+IndentWidth: 8
+PointerAlignment: Right
+UseTab: ForIndentation
+
+SpaceBeforeParens: ControlStatements
+SpaceAfterLogicalNot: false
+SpaceAfterCStyleCast: false
+
+ColumnLimit: 80
+PenaltyBreakAssignment: 60
+PenaltyBreakBeforeFirstCallParameter: 100
+PenaltyBreakOpenParenthesis: 40
+PenaltyExcessCharacter: 1
+PenaltyBreakString: 60
+PenaltyReturnTypeOnItsOwnLine: 90
