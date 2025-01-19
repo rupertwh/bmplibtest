@@ -103,4 +103,3 @@ void img_free(struct Image *img)
 	}
 	free(img);
 }
-

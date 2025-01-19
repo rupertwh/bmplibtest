@@ -6,4 +6,3 @@
 #mesondefine HAVE_LIBEXIF
 #mesondefine HAVE_LIBLCMS2
 #mesondefine HAVE_LIBBMP
-

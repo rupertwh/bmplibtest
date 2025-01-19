@@ -1,4 +1,4 @@
-/* bmplibtest - cmdline.h
+/* bmplibtest - conf.h
  *
  * Copyright (c) 2024-2025, Rupert Weber.
  *
@@ -18,18 +18,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-struct Cmdlinestr {
-	struct Cmdlinestr *next;
-	char               str[1];
+struct Confstr {
+	struct Confstr *next;
+	char            str[1];
 };
 
-struct Cmdline {
+struct Conf {
 	int                verbose;
-	int                nstrings;
-	struct Cmdlinestr *strlist;
+	char              *sampledir;
+	char              *refdir;
+	char              *tmpdir;
+	bool               env;
 	bool               help;
+	int                nstrings;
+	struct Confstr *strlist;
 };
 
-struct Cmdline* cmd_parse(int argc, char **argv);
-void cmd_free(struct Cmdline *cmdline);
+struct Conf* cmd_parse(int argc, char **argv);
+void cmd_free(struct Conf *cmdline);
 void cmd_usage(void);

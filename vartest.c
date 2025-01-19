@@ -32,13 +32,7 @@
 
 #include "imgstack.h"
 #include "cmdparser.h"
-#include "cmdline.h"
-
-const char sampledir[] = "/home/rw/source/bmpsuite-2.8/";
-const char refdir[]    = "/home/rw/source/bmplibtest/refs/";
-const char tmpdir[]    = "/home/rw/source/bmplibtest/tmp/";
-
-
+#include "conf.h"
 
 
 char* testdef[] = {
@@ -307,9 +301,13 @@ static bool perform_convertformat(struct Cmdarg *args);
 static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops, int symmetric);
 static struct Image* pngfile_read(FILE *file);
+static void trim_trailing_slash(char **str);
 
 
-struct Cmdline *cmdline;
+extern char **environ;
+
+struct Conf *conf;
+
 
 int main(int argc, char *argv[])
 {
@@ -317,15 +315,27 @@ int main(int argc, char *argv[])
 	int  bad = 0, good = 0;
 	bool only_selected_tests;
 
-	if (!(cmdline = cmd_parse(argc, argv)))
+	if (!(conf = cmd_parse(argc, argv))) {
+		printf("try -? or --help\n");
 		return 1;
+	}
 
-	if (cmdline->help) {
+	if (conf->help) {
 		cmd_usage();
 		return 0;
 	}
 
-	only_selected_tests = cmdline->strlist != NULL;
+	only_selected_tests = conf->strlist != NULL;
+
+	trim_trailing_slash(&conf->sampledir);
+	trim_trailing_slash(&conf->refdir);
+	trim_trailing_slash(&conf->tmpdir);
+
+	if (conf->verbose > 0) {
+		printf("samples: %s\n", conf->sampledir);
+		printf("ref    : %s\n", conf->refdir);
+		printf("tmp    : %s\n", conf->tmpdir);
+	}
 
 	numtest = sizeof testdef / sizeof testdef[0];
 
@@ -333,12 +343,12 @@ int main(int argc, char *argv[])
 		bool        failed = false;
 		bool        first  = true;
 		const char *cmdstr = testdef[i];
-		struct Cmdlinestr **str;
+		struct Confstr **str;
 
 		if (only_selected_tests) {
 			bool  found = false;
 			char *endptr;
-			for (str = &cmdline->strlist; *str; str = &(*str)->next) {
+			for (str = &conf->strlist; *str; str = &(*str)->next) {
 				if (*(*str)->str && i == strtol((*str)->str, &endptr, 10)) {
 					if (endptr && *endptr != '\0')
 						continue;
@@ -352,7 +362,7 @@ int main(int argc, char *argv[])
 		}
 
 		imgstack_clear();
-		if (cmdline->verbose > 0)
+		if (conf->verbose > 0)
 			printf("\n===== Test %02d: ", i);
 
 		do {
@@ -363,10 +373,10 @@ int main(int argc, char *argv[])
 
 				if (arglist_from_cmdstr(&cmdstr, argbuf, sizeof argbuf, &args)) {
 					if (!strcmp(cmdname, "name")) {
-						if (first && cmdline->verbose > 0)
+						if (first && conf->verbose > 0)
 							printf("%s\n", args ? args->arg : "(none)");
 					} else {
-						if (cmdline->verbose > 1) {
+						if (conf->verbose > 1) {
 							struct Cmdarg *a;
 							printf("-+'%s'\n", cmdname);
 							for (a = args; a != NULL; a = a->next) {
@@ -395,28 +405,27 @@ int main(int argc, char *argv[])
 
 		if (failed) {
 			bad++;
-			if (cmdline->verbose > 0)
+			if (conf->verbose > 0)
 				printf("****failed\n");
-		}
-		else {
+		} else {
 			good++;
-			if (cmdline->verbose > 0)
+			if (conf->verbose > 0)
 				printf("----passed\n");
 		}
 	}
 
-	if (cmdline->strlist) {
+	if (conf->strlist) {
 		printf("\nThe following specified tests didn't exist:\n");
-		for (struct Cmdlinestr *str = cmdline->strlist; str; str = str->next) {
+		for (struct Confstr *str = conf->strlist; str; str = str->next) {
 			printf(" - '%s'\n", str->str);
 		}
 		putchar('\n');
 	}
 
-	if (cmdline->verbose > -1)
+	if (conf->verbose > -1)
 		printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
 	imgstack_destroy();
-	cmd_free(cmdline);
+	cmd_free(conf);
 	return bad;
 }
 
@@ -441,9 +450,9 @@ static bool perform(const char *action, struct Cmdarg *args)
 		return perform_flatten(args);
 	else if (!strcmp("exposure", action))
 		return perform_exposure(args);
-	else {
+	else
 		printf("Unkown action: %s\n", action);
-	}
+
 	return false;
 }
 
@@ -491,16 +500,16 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	}
 
 	if (!strcmp(dir, "sample"))
-		dirpath = sampledir;
+		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
-		dirpath = tmpdir;
+		dirpath = conf->tmpdir;
 	else if (!strcmp(dir, "ref"))
-		dirpath = refdir;
+		dirpath = conf->refdir;
 	else {
 		printf("loadbmp: Invalid dir '%s'\n", dir);
 		goto abort;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s%s", dirpath, fname)) {
+	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
 	}
@@ -570,8 +579,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 				printf("loadbmp: invalid insanity value. must be 'yes'");
 				goto abort;
 			}
-		}
-		else {
+		} else {
 			printf("loadbmp: unknown option %s\n", optname);
 			goto abort;
 		}
@@ -658,7 +666,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		}
 	}
 
-	if (cmdline->verbose > 1)
+	if (conf->verbose > 1)
 		printf("Image %s loaded\n", path);
 	bmp_free(h); h = NULL;
 	fclose(file); file = NULL;
@@ -719,16 +727,16 @@ static bool perform_savebmp(struct Cmdarg *args)
 	}
 
 	if (!strcmp(dir, "sample"))
-		dirpath = sampledir;
+		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
-		dirpath = tmpdir;
+		dirpath = conf->tmpdir;
 	else if (!strcmp(dir, "ref"))
-		dirpath = refdir;
+		dirpath = conf->refdir;
 	else {
 		printf("loadbmp: Invalid dir '%s'", dir);
 		goto abort;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s%s", dirpath, fname)) {
+	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
 	}
@@ -753,8 +761,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid bufferbits (%d)\n", bufferbits);
 				goto abort;
 			}
-		}
-		else if (!strcmp(optname, "format")) {
+		} else if (!strcmp(optname, "format")) {
 			set_format = true;
 			if (!strcmp(optvalue, "int"))
 				format = BMP_FORMAT_INT;
@@ -766,8 +773,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid number format %s\n", optvalue);
 				goto abort;
 			}
-		}
-		else if (!strcmp(optname, "rle")) {
+		} else if (!strcmp(optname, "rle")) {
 			set_rle = true;
 			if (!strcmp(optvalue, "auto"))
 				rle = BMP_RLE_AUTO;
@@ -779,8 +785,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid rle option %s\n", optvalue);
 				goto abort;
 			}
-		}
-		else if (!strcmp(optname, "allow")) {
+		} else if (!strcmp(optname, "allow")) {
 			if (!strcmp(optvalue, "huff"))
 				allow_huff = true;
 			else if (!strcmp(optvalue, "2bit"))
@@ -791,8 +796,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid allow option %s\n", optvalue);
 				goto abort;
 			}
-		}
-		else if (!strcmp(optname, "outbits")) {
+		} else if (!strcmp(optname, "outbits")) {
 			set_outbits = true;
 			int col;
 			char *str;
@@ -813,11 +817,9 @@ static bool perform_savebmp(struct Cmdarg *args)
 				}
 				optvalue = str;
 			}
-		}
-		else if (!strcmp(optname, "64bit")) {
+		} else if (!strcmp(optname, "64bit")) {
 			set_64bit = true;
-		}
-		else {
+		} else {
 			printf("savebmp: unknown option %s\n", optname);
 			goto abort;
 		}
@@ -963,8 +965,7 @@ static bool perform_exposure(struct Cmdarg *args)
 
 		if (!strcmp(opt, "fstops")) {
 			fstops = atof(optval);
-		}
-		else if (!strcmp(opt,"symmetric")) {
+		} else if (!strcmp(opt, "symmetric")) {
 			symmetric = true;
 		}
 		args = args->next;
@@ -1006,16 +1007,14 @@ static bool perform_convertgamma(struct Cmdarg *args)
 			printf("Unknown conversion to %s\n", to);
 			return false;
 		}
-	}
-	else if (!strcmp(from, "linear")) {
+	} else if (!strcmp(from, "linear")) {
 		if (!strcmp(to, "srgb"))
 			convert_linear_to_srgb();
 		else {
 			printf("Unknown conversion to %s\n", to);
 			return false;
 		}
-	}
-	else {
+	} else {
 		printf("Unknown conversion from %s\n", from);
 		return false;
 	}
@@ -1219,14 +1218,11 @@ static bool perform_convertformat(struct Cmdarg *args)
 
 	if (!strcmp(to, "float")) {
 		convert_format(BMP_FORMAT_FLOAT, 0);
-	}
-	else if (!strcmp(to, "s2.13")) {
+	} else if (!strcmp(to, "s2.13")) {
 		convert_format(BMP_FORMAT_S2_13, 0);
-	}
-	else if (!strcmp(to, "int")) {
+	} else if (!strcmp(to, "int")) {
 		convert_format(BMP_FORMAT_INT, bits);
-	}
-	else {
+	} else {
 		printf("Unknown conversion to %s\n", to);
 		return false;
 	}
@@ -1442,16 +1438,16 @@ static bool perform_loadpng(struct Cmdarg *args)
 	}
 
 	if (!strcmp(dir, "sample"))
-		dirpath = sampledir;
+		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
-		dirpath = tmpdir;
+		dirpath = conf->tmpdir;
 	else if (!strcmp(dir, "ref"))
-		dirpath = refdir;
+		dirpath = conf->refdir;
 	else {
 		printf("loadpng: Invalid dir '%s'", dir);
 		goto abort;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s%s", dirpath, fname)) {
+	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
 	}
@@ -1634,4 +1630,26 @@ abort:
 		free(row_pointers);
 
 	return NULL;
+}
+
+static void trim_trailing_slash(char **str)
+{
+	size_t len;
+	char  *tmp;
+
+	if (!(str && *str))
+		exit(1);
+
+	len = strlen(*str);
+
+	if (!(tmp = malloc(len + 1))) {
+		perror("malloc");
+		exit(1);
+	}
+
+	strcpy(tmp, *str);
+	*str = tmp;
+
+	while (len > 0 && (*str)[len - 1] == '/')
+		(*str)[--len] = 0;
 }

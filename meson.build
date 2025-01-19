@@ -1,4 +1,4 @@
-project('bmplibtest', 'c', default_options: ['c_std=c11'], version: '0.2.0')
+project('bmplibtest', 'c', default_options: ['c_std=c11'], version: '0.3.0')
 
 cc = meson.get_compiler('c')
 
@@ -34,5 +34,5 @@ executable('vartest',
            'vartest.c',
            'imgstack.c',
            'cmdparser.c',
-           'cmdline.c',
+           'conf.c',
            dependencies: [bmpdep, pngdep, mathdep])
