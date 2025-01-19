@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
 
@@ -22,11 +23,11 @@ struct Option {
 	const enum Optnum op;
 	const int         shortname;
 	const char       *longname;
-	const int         has_arg;
+	const bool        has_arg;
 } s_options[] = {
-	{ OP_VERBOSE, 'v', "verbose", 0 },
-	{ OP_QUIET,   'q', "quiet",   0 },
-	{ OP_HELP,    '?', "help",    0 },
+	{ OP_VERBOSE, 'v', "verbose", false },
+	{ OP_QUIET,   'q', "quiet",   false },
+	{ OP_HELP,    '?', "help",    false },
 };
 
 
@@ -35,8 +36,11 @@ static char **s_argv;
 
 static bool next_arg(const char **parg);
 static bool do_opt(int op, struct Cmdline *cmdline);
-static bool do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline);
+static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline);
 static bool add_file(struct Cmdline *cmdline, const char *arg);
+static bool strict_strcmp(const char *s1, const char *s2, size_t len);
+static const int shortname(enum Optnum op);
+static const char* longname(enum Optnum op);
 
 
 /********************************************************
@@ -71,7 +75,7 @@ static bool do_opt(int op, struct Cmdline *cmdline)
  * 	do_opt_arg
  *******************************************************/
 
-static bool do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmdline)
+static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline)
 {
 	char *endptr = NULL;
 
@@ -81,6 +85,20 @@ static bool do_opt_arg(const char *arg, int op, int longopt, struct Cmdline *cmd
 	}
 
 	switch (s_options[op].op) {
+/*
+		case OP_BITS:
+			cmdline->bits = strtol(arg, &endptr, 10);
+			break;
+
+		case OP_BGFILENAME:
+			cmdline->bgfilename = malloc(strlen(arg)+1);
+			if (!cmdline->bgfilename) {
+				printerr("malloc failed");
+				return 0;
+			}
+			strcpy(cmdline->bgfilename, arg);
+			break;
+*/
 
 		default:
 			fprintf(stderr, "do_opt_arg(): Impossible option %s!\n", s_options[op].longname);
@@ -130,7 +148,7 @@ bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 				comparelen = equalsign ? equalsign - arg : strlen(arg);
 
 				for (i = 0, op = opnum; i < opnum; i++) {
-					if (s_options[i].longname && !strncmp(arg, s_options[i].longname,
+					if (s_options[i].longname && strict_strcmp(arg, s_options[i].longname,
 					                             MAX(comparelen, strlen(s_options[i].longname)))) {
 						op = i;
 						break;
@@ -150,7 +168,7 @@ bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 					}
 					arg = equalsign + 1;
 
-					if (!do_opt_arg(arg, op, 1, cmdline))
+					if (!do_opt_arg(arg, op, true, cmdline))
 						goto abort;
 
 				} else {
@@ -169,13 +187,13 @@ bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 				/*short option(s) */
 				while (*arg) {
 					for (i = 0, op = opnum; i < opnum; i++) {
-						if (s_options[i].shortname == (int) *arg) {
+						if (s_options[i].shortname == (int) (unsigned char) *arg) {
 							op = i;
 							break;
 						}
 					}
 					if (opnum == op) {
-						fprintf(stderr, "Unknown option -%c\n", (int) *arg);
+						fprintf(stderr, "Unknown option -%c\n", (int) (unsigned char) *arg);
 						goto abort;
 					}
 
@@ -234,30 +252,26 @@ void cmd_usage(void)
 	printf("\t%s [options] [testnums...]\n", progname);
 	printf("\nOptions:\n");
 
-	printf("\t-%c, --%s\n", s_options[OP_VERBOSE].shortname,
-	                        s_options[OP_VERBOSE].longname);
-	printf("\t-%c, --%s\n", s_options[OP_QUIET].shortname,
-	                        s_options[OP_QUIET].longname);
+	printf("\t-%c, --%s\n", shortname(OP_VERBOSE), longname(OP_VERBOSE));
+	printf("\t-%c, --%s\n", shortname(OP_QUIET),   longname(OP_QUIET));
 	printf("\t\tBe more or less verbose. Repeat option to be even more verbose\n"
 		   "\t\tor quiet.\n");
-	printf("\t\t(-%c%c to -%c%c)\n\n", s_options[OP_QUIET].shortname,
-	                                   s_options[OP_QUIET].shortname,
-	                                   s_options[OP_VERBOSE].shortname,
-	                                   s_options[OP_VERBOSE].shortname);
+	printf("\t\t(-%c%c to -%c%c)\n\n", shortname(OP_QUIET),   shortname(OP_QUIET),
+	                                   shortname(OP_VERBOSE), shortname(OP_VERBOSE));
 
-	printf("\t\t-%c%c\tsuper quiet, not even error messages\n",
-	                                                         s_options[OP_QUIET].shortname,
-	                                                         s_options[OP_QUIET].shortname);
-	printf("\t\t-%c\tquiet, only fatal/serious error messages\n",
-	                                                         s_options[OP_QUIET].shortname);
+	printf("\t\t-%c%c\tsuper quiet, not even error messages\n", shortname(OP_QUIET),
+	                                                            shortname(OP_QUIET));
+
+	printf("\t\t-%c\tquiet, only fatal/serious error messages\n", shortname(OP_QUIET));
 	printf("\t\t(none)\tbasic progress information\n");
-	printf("\t\t-%c\tverbose, print detailed information\n", s_options[OP_VERBOSE].shortname);
-	printf("\t\t-%c%c\tsuper verbose, print lots and lots of info\n\n",
-	                                                         s_options[OP_VERBOSE].shortname,
-	                                                         s_options[OP_VERBOSE].shortname);
+	printf("\t\t-%c\tverbose, print detailed information\n", shortname(OP_VERBOSE));
 
-	printf("\t-%c, --%s\n", s_options[OP_HELP].shortname,
-	                        s_options[OP_HELP].longname);
+	printf("\t\t-%c%c\tsuper verbose, print lots and lots of info\n\n",
+	                                                         shortname(OP_VERBOSE),
+	                                                         shortname(OP_VERBOSE));
+
+	printf("\t-%c, --%s\n", shortname(OP_HELP),
+	                        longname(OP_HELP));
 	printf("\t\tPrint this help screen.\n\n");
 }
 
@@ -334,4 +348,41 @@ static bool next_arg(const char **parg)
 
 	*parg = s_argv[s_current_arg];
 	return true;
+}
+
+
+static bool strict_strcmp(const char *s1, const char *s2, size_t len)
+{
+	if (!(len < SIZE_MAX))
+		return false;
+
+	for (size_t i = 0; i < len; i++) {
+		if (s1[i] != s2[i] || !(s1[i] && s2[i]))
+			return false;
+	}
+	return true;
+}
+
+
+static int shortname(enum Optnum op)
+{
+	int n = sizeof s_options / sizeof s_options[0];
+
+	for (int i = 0; i < n; i++) {
+		if (op == s_options[i].op)
+			return s_options[i].shortname;
+	}
+	return 0;
+}
+
+
+static const char* longname(enum Optnum op)
+{
+	int n = sizeof s_options / sizeof s_options[0];
+
+	for (int i = 0; i < n; i++) {
+		if (op == s_options[i].op)
+			return s_options[i].longname;
+	}
+	return "0";
 }
