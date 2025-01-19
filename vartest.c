@@ -309,19 +309,17 @@ static void set_exposure(double fstops, int symmetric);
 static struct Image* pngfile_read(FILE *file);
 
 
-struct Cmdline cmdline;
+struct Cmdline *cmdline;
 
 int main(int argc, char *argv[])
 {
 	int    numtest;
 	int    bad = 0, good = 0;
 
-	memset(&cmdline, 0, sizeof cmdline);
-
-	if (!cmd_parse(argc, argv, &cmdline))
+	if (!(cmdline = cmd_parse(argc, argv)))
 		return 1;
 
-	if (cmdline.help) {
+	if (cmdline->help) {
 		cmd_usage();
 		return 0;
 	}
@@ -332,19 +330,19 @@ int main(int argc, char *argv[])
 		bool        failed = false;
 		bool        first  = true;
 		const char *cmdstr = testdef[i];
+		struct Cmdlinestr *str;
 
-		if (cmdline.nfiles) {
-			int j;
-			for (j = 0; j < cmdline.nfiles; j++) {
-				if (i == atol(cmdline.file[j]))
+		if (cmdline->strlist) {
+			for (str = cmdline->strlist; str; str = str->next) {
+				if (i == atol(str->str))
 					break;
 			}
-			if (j == cmdline.nfiles)
+			if (!str)
 				continue;
 		}
 
 		imgstack_clear();
-		if (cmdline.verbose > 0)
+		if (cmdline->verbose > 0)
 			printf("\n===== Test %02d: ", i);
 
 		do {
@@ -355,10 +353,10 @@ int main(int argc, char *argv[])
 
 				if (arglist_from_cmdstr(&cmdstr, argbuf, sizeof argbuf, &args)) {
 					if (!strcmp(cmdname, "name")) {
-						if (first && cmdline.verbose > 0)
+						if (first && cmdline->verbose > 0)
 							printf("%s\n", args ? args->arg : "(none)");
 					} else {
-						if (cmdline.verbose > 1) {
+						if (cmdline->verbose > 1) {
 							struct Cmdarg *a;
 							printf("-+'%s'\n", cmdname);
 							for (a = args; a != NULL; a = a->next) {
@@ -387,20 +385,20 @@ int main(int argc, char *argv[])
 
 		if (failed) {
 			bad++;
-			if (cmdline.verbose > 0)
+			if (cmdline->verbose > 0)
 				printf("****failed\n");
 		}
 		else {
 			good++;
-			if (cmdline.verbose > 0)
+			if (cmdline->verbose > 0)
 				printf("----passed\n");
 		}
 	}
 
-	if (cmdline.verbose > -1)
+	if (cmdline->verbose > -1)
 		printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
 	imgstack_destroy();
-	cmd_free(&cmdline);
+	cmd_free(cmdline);
 	return bad;
 }
 
@@ -642,7 +640,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		}
 	}
 
-	if (cmdline.verbose > 1)
+	if (cmdline->verbose > 1)
 		printf("Image %s loaded\n", path);
 	bmp_free(h); h = NULL;
 	fclose(file); file = NULL;

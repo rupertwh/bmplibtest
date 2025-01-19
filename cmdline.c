@@ -1,3 +1,22 @@
+/* bmplibtest - cmdline.c
+ *
+ * Copyright (c) 2024-2025, Rupert Weber.
+ *
+ * This file is part of bmplibtest.
+ *
+ * bmplibtest is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -8,10 +27,13 @@
 #include <stdbool.h>
 
 #include "config.h"
-
 #include "cmdline.h"
 
-#define MAX(a, b) (a) > (b) ? (a) : (b)
+#if defined(__GNUC__)
+	#define MAY_BE_UNUSED __attribute__((unused))
+#else
+	#define MAY_BE_UNUSED
+#endif
 
 enum Optnum {
 	OP_VERBOSE,
@@ -30,21 +52,18 @@ struct Option {
 	{ OP_HELP,    '?', "help",    false },
 };
 
-
-static int    s_current_arg, s_argc;
-static char **s_argv;
-
-static bool next_arg(const char **parg);
-static bool do_opt(int op, struct Cmdline *cmdline);
-static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline);
-static bool add_file(struct Cmdline *cmdline, const char *arg);
-static bool strict_strcmp(const char *s1, const char *s2, size_t len);
+static MAY_BE_UNUSED void add_opt_arg_str(char **result, const char *arg);
 static const int shortname(enum Optnum op);
 static const char* longname(enum Optnum op);
+static void print_option(enum Optnum op);
 
 
 /********************************************************
  * 	do_opt
+ *
+ * 	Handle argument-less options, i.e. simple
+ * 	switches.
+ *      E.g. "-p", "--yes"
  *******************************************************/
 
 static bool do_opt(int op, struct Cmdline *cmdline)
@@ -70,33 +89,31 @@ static bool do_opt(int op, struct Cmdline *cmdline)
 }
 
 
-
 /********************************************************
  * 	do_opt_arg
+ *
+ * 	Handle options that have an argument.
+ * 	E.g. "-f filename", "--mode=release"
  *******************************************************/
 
 static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline)
 {
-	char *endptr = NULL;
+	char  *endptr = NULL;
 
 	if (!*arg) {
 		fprintf(stderr, "Missing argument to --%s option: '%s'\n", s_options[op].longname, arg);
 		return false;
 	}
 
+
 	switch (s_options[op].op) {
 /*
-		case OP_BITS:
-			cmdline->bits = strtol(arg, &endptr, 10);
+		case OP_SOME_INT_ARG:
+			cmdline->myintarg = strtol(arg, &endptr, 10);
 			break;
 
-		case OP_BGFILENAME:
-			cmdline->bgfilename = malloc(strlen(arg)+1);
-			if (!cmdline->bgfilename) {
-				printerr("malloc failed");
-				return 0;
-			}
-			strcpy(cmdline->bgfilename, arg);
+		case OP_SOME_STR_ARG:
+			add_opt_arg_str(&cmdline->mystrarg, arg);
 			break;
 */
 
@@ -116,20 +133,130 @@ static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cm
 
 
 /********************************************************
+ * 	cmd_usage
+ *******************************************************/
+
+void cmd_usage(void)
+{
+	const char *debug;
+
+#ifdef DEBUG
+	debug = "-debug";
+#else
+	debug = "";
+#endif
+
+	printf("%s v%s%s\n", PROGRAM_NAME, PROGRAM_VERSION, debug);
+	printf("\nUsage:\n");
+	printf("\t%s [options] [testnums...]\n", PROGRAM_NAME);
+	printf("\nOptions:\n");
+
+	print_option(OP_VERBOSE);
+	print_option(OP_QUIET);
+	printf("\t\tBe more or less verbose. Repeat option to be even more verbose\n"
+               "\t\tor quiet.\n\n");
+
+	print_option(OP_HELP);
+	printf("\t\tPrint this help screen.\n\n");
+}
+
+
+/*
+ * =====================================================================================
+ *
+ *   Everything below this line is generic and should not have to be adapted
+ *   for respective command line options.
+ *
+ */
+
+
+#define MAX(a, b) (a) > (b) ? (a) : (b)
+#define ALIGN_TO_POINTER(a)  (((a) + (sizeof(void*) - 1)) & (~(sizeof(void*) - 1)))
+
+static bool next_arg(const char **parg);
+static bool do_opt(int op, struct Cmdline *cmdline);
+static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline);
+static bool add_string(struct Cmdline *cmdline, const char *arg);
+static bool strict_strcmp(const char *s1, const char *s2, size_t len);
+
+static int    s_current_arg, s_argc;
+static char **s_argv;
+static size_t s_size, s_used = 0;
+static char  *s_buffer;
+
+
+/********************************************************
+ * 	print_option
+ *******************************************************/
+
+static void print_option(enum Optnum op)
+{
+	printf("\t-%c, --%s\n", shortname(op), longname(op));
+}
+
+
+/********************************************************
+ * 	add_opt_arg_str
+ *******************************************************/
+
+static MAY_BE_UNUSED void add_opt_arg_str(char **result, const char *arg)
+{
+	size_t sz;
+
+	sz = strlen(arg) + 1;
+	if (s_used > s_size - sz) {
+		printf("cmdline buffer too small!\n");
+		exit(1);
+	}
+	*result = s_buffer + s_used;
+	strcpy(*result, arg);
+	s_used += sz;
+}
+
+
+/********************************************************
+ * 	estimate_size
+ *******************************************************/
+
+static size_t estimate_size(int argc, char **argv)
+{
+	size_t size = 0;
+
+	for (int i = 1; i < argc; i++)
+		size += ALIGN_TO_POINTER(strlen(argv[i]) + 1 + sizeof(struct Cmdlinestr));
+
+	size += sizeof(struct Cmdline);
+
+	return size;
+}
+
+
+/********************************************************
  * 	cmd_parse
  *******************************************************/
 
-bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
+struct Cmdline* cmd_parse(int argc, char **argv)
 {
 	const char       *arg = NULL, *equalsign;
 	int               i, op;
 	bool              rest_is_args = false;
 	static const int  opnum = sizeof s_options / sizeof s_options[0];
 	size_t            comparelen;
+	struct Cmdline   *cmdline;
 
 	s_current_arg = 0;
 	s_argc = argc;
 	s_argv = argv;
+
+	s_size = estimate_size(argc, argv);
+
+	if (!(s_buffer = malloc(s_size))) {
+		perror("malloc");
+		return NULL;
+	}
+	memset(s_buffer, 0, s_size);
+	cmdline = (struct Cmdline*) s_buffer;
+	s_used += sizeof *cmdline;
 
 	while (next_arg(&arg))
 	{
@@ -216,65 +343,20 @@ bool cmd_parse(int argc, char **argv, struct Cmdline *cmdline)
 			}
 
 		} else {  /* non-option argument */
-			if (!add_file(cmdline, arg))
+			if (!add_string(cmdline, arg))
 				goto abort;
 		}
 	}
-	return true;
+
+
+	/* printf("Cmdline: allocated %lu, used %lu\n", (unsigned long)s_size, (unsigned long)s_used); */
+
+	return cmdline;
 
 abort:
-	/*fprintf(stderr, "Invalid argument '%s'\n", arg);*/
 	cmd_free(cmdline);
-	return false;
+	return NULL;
 }
-
-
-
-/********************************************************
- * 	cmd_usage
- *******************************************************/
-
-void cmd_usage(void)
-{
-	char *progname, *version, *debug;
-
-#ifdef DEBUG
-	debug = " debug";
-#else
-	debug = "";
-#endif
-
-	progname = PROGRAM_NAME;
-	version  = PROGRAM_VERSION;
-
-	printf("%s v%s%s\n", progname, version, debug);
-	printf("\nUsage:\n");
-	printf("\t%s [options] [testnums...]\n", progname);
-	printf("\nOptions:\n");
-
-	printf("\t-%c, --%s\n", shortname(OP_VERBOSE), longname(OP_VERBOSE));
-	printf("\t-%c, --%s\n", shortname(OP_QUIET),   longname(OP_QUIET));
-	printf("\t\tBe more or less verbose. Repeat option to be even more verbose\n"
-		   "\t\tor quiet.\n");
-	printf("\t\t(-%c%c to -%c%c)\n\n", shortname(OP_QUIET),   shortname(OP_QUIET),
-	                                   shortname(OP_VERBOSE), shortname(OP_VERBOSE));
-
-	printf("\t\t-%c%c\tsuper quiet, not even error messages\n", shortname(OP_QUIET),
-	                                                            shortname(OP_QUIET));
-
-	printf("\t\t-%c\tquiet, only fatal/serious error messages\n", shortname(OP_QUIET));
-	printf("\t\t(none)\tbasic progress information\n");
-	printf("\t\t-%c\tverbose, print detailed information\n", shortname(OP_VERBOSE));
-
-	printf("\t\t-%c%c\tsuper verbose, print lots and lots of info\n\n",
-	                                                         shortname(OP_VERBOSE),
-	                                                         shortname(OP_VERBOSE));
-
-	printf("\t-%c, --%s\n", shortname(OP_HELP),
-	                        longname(OP_HELP));
-	printf("\t\tPrint this help screen.\n\n");
-}
-
 
 
 /********************************************************
@@ -283,55 +365,39 @@ void cmd_usage(void)
 
 void cmd_free(struct Cmdline *cmdline)
 {
-	if (cmdline->file) {
-		for (int i = 0; i < cmdline->nfiles; i++) {
-			if (cmdline->file[i]) {
-				free(cmdline->file[i]);
-				cmdline->file[i] = NULL;
-			}
-		}
-		cmdline->nfiles = 0;
-		free(cmdline->file);
-		cmdline->file = NULL;
-	}	
+	if (cmdline)
+		free(cmdline);
 }
-
 
 
 /********************************************************
- * 	add_file
+ * 	add_string
  *******************************************************/
 
-static bool add_file(struct Cmdline *cmdline, const char *arg)
+static bool add_string(struct Cmdline *cmdline, const char *arg)
 {
-	char      **tmp;
-	static int  nalloc = 0, newsize;
-	const int   inc = 5;
+	size_t             sz;
+	struct Cmdlinestr *str;
 
-	if (nalloc < cmdline->nfiles + 1) {
-		if (nalloc >= INT_MAX - inc) {
-			perror("add_file() crazy big memory needed!");
-			return false;
-		}
-		tmp = realloc(cmdline->file, (newsize = nalloc + inc) * sizeof *cmdline->file);
-		if (!tmp) {
-			perror("add_file()");
-			return false;
-		}
-		nalloc = newsize;
-		cmdline->file = tmp;
+	sz = sizeof *str + strlen(arg) + 1;
+
+	s_used = ALIGN_TO_POINTER(s_used);
+
+	if (s_used > s_size - sz) {
+		fprintf(stderr, "Cmdline add_string() ran out of space\n");
+		exit(1);
 	}
 
-	if (!(cmdline->file[cmdline->nfiles] = malloc(strlen(arg) + 1))) {
-		perror("add_file() malloc()");
-		return false;
-	}
+	str = (struct Cmdlinestr*) (s_buffer + s_used);
+	s_used += sz;
 
-	strcpy(cmdline->file[cmdline->nfiles++], arg);
+	str->next = cmdline->strlist;
+	cmdline->strlist = str;
+
+	strcpy(str->str, arg);
 
 	return true;
 }
-
 
 
 /********************************************************
@@ -351,6 +417,10 @@ static bool next_arg(const char **parg)
 }
 
 
+/********************************************************
+ * 	strict_strcmp
+ *******************************************************/
+
 static bool strict_strcmp(const char *s1, const char *s2, size_t len)
 {
 	if (!(len < SIZE_MAX))
@@ -364,6 +434,10 @@ static bool strict_strcmp(const char *s1, const char *s2, size_t len)
 }
 
 
+/********************************************************
+ * 	shortname
+ *******************************************************/
+
 static int shortname(enum Optnum op)
 {
 	int n = sizeof s_options / sizeof s_options[0];
@@ -375,6 +449,10 @@ static int shortname(enum Optnum op)
 	return 0;
 }
 
+
+/********************************************************
+ * 	longname
+ *******************************************************/
 
 static const char* longname(enum Optnum op)
 {
