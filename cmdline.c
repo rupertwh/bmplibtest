@@ -82,8 +82,8 @@ static bool do_opt(int op, struct Cmdline *cmdline)
 			break;
 
 		default:
-			fprintf(stderr, "do_opt(): Impossible option %s!\n", s_options[op].longname);
-			return false;
+			printf("Something is boken\n");
+			exit(1);
 	}
 	return true;
 }
@@ -96,12 +96,12 @@ static bool do_opt(int op, struct Cmdline *cmdline)
  * 	E.g. "-f filename", "--mode=release"
  *******************************************************/
 
-static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline)
+static bool do_opt_arg(const char *arg, int op, struct Cmdline *cmdline)
 {
 	char  *endptr = NULL;
 
 	if (!*arg) {
-		fprintf(stderr, "Missing argument to --%s option: '%s'\n", s_options[op].longname, arg);
+		fprintf(stderr, "Missing argument to --%s option: '%s'\n", longname(op), arg);
 		return false;
 	}
 
@@ -118,12 +118,12 @@ static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cm
 */
 
 		default:
-			fprintf(stderr, "do_opt_arg(): Impossible option %s!\n", s_options[op].longname);
-			return false;
+			printf("Something is boken\n");
+			exit(1);
 	}
 
 	if (endptr && *endptr != '\0') {
-		fprintf(stderr, "Invalid numerical argument to --%s option: '%s'\n", s_options[op].longname, arg);
+		fprintf(stderr, "Invalid numerical argument to --%s option: '%s'\n", longname(op), arg);
 		return false;
 	}
 
@@ -149,6 +149,7 @@ void cmd_usage(void)
 	printf("%s v%s%s\n", PROGRAM_NAME, PROGRAM_VERSION, debug);
 	printf("\nUsage:\n");
 	printf("\t%s [options] [testnums...]\n", PROGRAM_NAME);
+	printf("\n\tIf no test numbers are given, all available tests will be run.\n");
 	printf("\nOptions:\n");
 
 	print_option(OP_VERBOSE);
@@ -174,15 +175,15 @@ void cmd_usage(void)
 #define ALIGN_TO_POINTER(a)  (((a) + (sizeof(void*) - 1)) & (~(sizeof(void*) - 1)))
 
 static bool next_arg(const char **parg);
-static bool do_opt(int op, struct Cmdline *cmdline);
-static bool do_opt_arg(const char *arg, int op, bool longopt, struct Cmdline *cmdline);
 static bool add_string(struct Cmdline *cmdline, const char *arg);
 static bool strict_strcmp(const char *s1, const char *s2, size_t len);
+static int capped_strlen(const char *str);
 
 static int    s_current_arg, s_argc;
 static char **s_argv;
-static size_t s_size, s_used = 0;
+static int    s_size, s_used = 0;
 static char  *s_buffer;
+struct Cmdlinestr **s_listtail;
 
 
 /********************************************************
@@ -201,9 +202,9 @@ static void print_option(enum Optnum op)
 
 static MAY_BE_UNUSED void add_opt_arg_str(char **result, const char *arg)
 {
-	size_t sz;
+	int sz;
 
-	sz = strlen(arg) + 1;
+	sz = capped_strlen(arg) + 1;
 	if (s_used > s_size - sz) {
 		printf("cmdline buffer too small!\n");
 		exit(1);
@@ -218,16 +219,21 @@ static MAY_BE_UNUSED void add_opt_arg_str(char **result, const char *arg)
  * 	estimate_size
  *******************************************************/
 
-static size_t estimate_size(int argc, char **argv)
+static int estimate_size(int argc, char **argv)
 {
-	size_t size = 0;
+	int total_size = sizeof(struct Cmdline);
 
-	for (int i = 1; i < argc; i++)
-		size += ALIGN_TO_POINTER(strlen(argv[i]) + 1 + sizeof(struct Cmdlinestr));
+	for (int i = 1; i < argc; i++) {
+		int item_size = ALIGN_TO_POINTER(capped_strlen(argv[i]) + 1 + sizeof(struct Cmdlinestr));
 
-	size += sizeof(struct Cmdline);
+		if (item_size >= INT_MAX - total_size) {
+			printf("Crazy long argument list!!!\n");
+			exit(1);
+		}
+		total_size += item_size;
+	}
 
-	return size;
+	return total_size;
 }
 
 
@@ -258,6 +264,8 @@ struct Cmdline* cmd_parse(int argc, char **argv)
 	cmdline = (struct Cmdline*) s_buffer;
 	s_used += sizeof *cmdline;
 
+	s_listtail = &cmdline->strlist;
+
 	while (next_arg(&arg))
 	{
 		if ('-' == *arg && !rest_is_args) {
@@ -271,12 +279,12 @@ struct Cmdline* cmd_parse(int argc, char **argv)
 					rest_is_args = true;
 					continue;
 				}
-				equalsign = strchr(arg, '=');
-				comparelen = equalsign ? equalsign - arg : strlen(arg);
+				equalsign  = strchr(arg, '=');
+				comparelen = equalsign ? equalsign - arg : capped_strlen(arg);
 
 				for (i = 0, op = opnum; i < opnum; i++) {
 					if (s_options[i].longname && strict_strcmp(arg, s_options[i].longname,
-					                             MAX(comparelen, strlen(s_options[i].longname)))) {
+					                             MAX(comparelen, capped_strlen(s_options[i].longname)))) {
 						op = i;
 						break;
 					}
@@ -295,7 +303,7 @@ struct Cmdline* cmd_parse(int argc, char **argv)
 					}
 					arg = equalsign + 1;
 
-					if (!do_opt_arg(arg, op, true, cmdline))
+					if (!do_opt_arg(arg, op, cmdline))
 						goto abort;
 
 				} else {
@@ -332,7 +340,7 @@ struct Cmdline* cmd_parse(int argc, char **argv)
 								goto abort;
 							}
 						}
-						if (!do_opt_arg(arg, op, 0, cmdline))
+						if (!do_opt_arg(arg, op, cmdline))
 							goto abort;
 						break; /* no more options after an arg */
 					} else {
@@ -376,10 +384,10 @@ void cmd_free(struct Cmdline *cmdline)
 
 static bool add_string(struct Cmdline *cmdline, const char *arg)
 {
-	size_t             sz;
+	int                sz;
 	struct Cmdlinestr *str;
 
-	sz = sizeof *str + strlen(arg) + 1;
+	sz = sizeof *str + capped_strlen(arg) + 1;
 
 	s_used = ALIGN_TO_POINTER(s_used);
 
@@ -391,8 +399,8 @@ static bool add_string(struct Cmdline *cmdline, const char *arg)
 	str = (struct Cmdlinestr*) (s_buffer + s_used);
 	s_used += sz;
 
-	str->next = cmdline->strlist;
-	cmdline->strlist = str;
+	*s_listtail = str;
+	s_listtail  = &str->next;
 
 	strcpy(str->str, arg);
 
@@ -463,4 +471,20 @@ static const char* longname(enum Optnum op)
 			return s_options[i].longname;
 	}
 	return "0";
+}
+
+
+/********************************************************
+ * 	capped_strlen
+ *******************************************************/
+
+static int capped_strlen(const char *str)
+{
+	size_t size = strlen(str);
+
+	if (size > INT_MAX / 2) {
+		printf("Crazy big string: %llu bytes\n", (unsigned long long)size);
+		exit(1);
+	}
+	return (int) size;
 }

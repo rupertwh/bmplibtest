@@ -313,8 +313,9 @@ struct Cmdline *cmdline;
 
 int main(int argc, char *argv[])
 {
-	int    numtest;
-	int    bad = 0, good = 0;
+	int  numtest;
+	int  bad = 0, good = 0;
+	bool only_selected_tests;
 
 	if (!(cmdline = cmd_parse(argc, argv)))
 		return 1;
@@ -324,20 +325,29 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	only_selected_tests = cmdline->strlist != NULL;
+
 	numtest = sizeof testdef / sizeof testdef[0];
 
 	for (int i = 0; i < numtest; i++) {
 		bool        failed = false;
 		bool        first  = true;
 		const char *cmdstr = testdef[i];
-		struct Cmdlinestr *str;
+		struct Cmdlinestr **str;
 
-		if (cmdline->strlist) {
-			for (str = cmdline->strlist; str; str = str->next) {
-				if (i == atol(str->str))
+		if (only_selected_tests) {
+			bool  found = false;
+			char *endptr;
+			for (str = &cmdline->strlist; *str; str = &(*str)->next) {
+				if (*(*str)->str && i == strtol((*str)->str, &endptr, 10)) {
+					if (endptr && *endptr != '\0')
+						continue;
+					*str = (*str)->next;
+					found = true;
 					break;
+				}
 			}
-			if (!str)
+			if (!found)
 				continue;
 		}
 
@@ -393,6 +403,14 @@ int main(int argc, char *argv[])
 			if (cmdline->verbose > 0)
 				printf("----passed\n");
 		}
+	}
+
+	if (cmdline->strlist) {
+		printf("\nThe following specified tests didn't exist:\n");
+		for (struct Cmdlinestr *str = cmdline->strlist; str; str = str->next) {
+			printf(" - '%s'\n", str->str);
+		}
+		putchar('\n');
 	}
 
 	if (cmdline->verbose > -1)
