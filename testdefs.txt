@@ -1,0 +1,275 @@
+# bmplibtest - testdefs.txt
+#
+# Copyright (c) 2024-2025, Rupert Weber.
+#
+# This file is part of bmplibtest.
+# bmplibtest is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+
+name{Load 1-bit indexed bl/grn}
+loadbmp{sample,g/pal1bg.bmp}
+loadpng{ref,ref_8bit_2bg.png}
+compare{}
+
+name{Load 1-bit indexed b/w}
+loadbmp{sample,g/pal1.bmp}
+loadpng{ref,ref_8bit_2bw.png}
+compare{ }
+
+name{Load 1-bit indexed w/b}
+loadbmp{sample,g/pal1wb.bmp}
+loadpng{ref,ref_8bit_2bw.png}
+compare{ }
+
+name{Load 4-bit indexed}
+loadbmp{sample,g/pal4.bmp}
+loadpng{ref,ref_8bit_12c.png}
+compare{ }
+
+name{Load 4-bit indexed gs }
+loadbmp{sample,g/pal4gs.bmp}
+loadpng{ref,ref_8bit_12gs.png}
+compare{ }
+
+name{Load 4-bit RLE}
+loadbmp{sample,g/pal4rle.bmp}
+loadpng{ref,ref_8bit_12c_alpha.png}
+compare{ }
+
+name{Load 8-bit indexed all zero}
+loadbmp{sample,g/pal8-0.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed}
+loadbmp{sample,g/pal8.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed gs}
+loadbmp{sample,g/pal8gs.bmp}
+loadpng{ref,ref_8bit_252gs.png}
+compare{ }
+
+name{Load 8-bit indexed nonsquare}
+loadbmp{sample,g/pal8nonsquare.bmp}
+loadpng{ref,ref_8bit_252c_nonsquare.png}
+compare{ }
+
+name{Load 8-bit indexed OS/2}
+loadbmp{sample,g/pal8os2.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed OS/2 v2 16}
+loadbmp{sample,q/pal8os2v2-16.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed OS/2 v2 40}
+loadbmp{sample,q/pal8os2v2-40sz.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed OS/2 v2-sz}
+loadbmp{sample,q/pal8os2v2-sz.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit RLE}
+loadbmp{sample,g/pal8rle.bmp}
+loadpng{ref,ref_8bit_252c_alpha.png}
+compare{ }
+
+name{Load 8-bit indexed topdown}
+loadbmp{sample,g/pal8topdown.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed V4}
+loadbmp{sample,g/pal8v4.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed V5}
+loadbmp{sample,g/pal8v5.bmp}
+loadpng{ref,ref_8bit_252c.png}
+compare{ }
+
+name{Load 8-bit indexed w124}
+loadbmp{sample,g/pal8w124.bmp}
+loadpng{ref,ref_8bit_252c_w124.png}
+compare{ }
+
+name{Load 8-bit indexed w125}
+loadbmp{sample,g/pal8w125.bmp}
+loadpng{ref,ref_8bit_252c_w125.png}
+compare{ }
+
+name{Load 8-bit indexed w126}
+loadbmp{sample,g/pal8w126.bmp}
+loadpng{ref,ref_8bit_252c_w126.png}
+compare{ }
+
+name{Load 16-bit RGB 565}
+loadbmp{sample,g/rgb16-565.bmp}
+loadpng{ref,ref_8bit_rgb16-565.png}
+compare{ }
+
+name{Load 16-bit RGB 565 + color table}
+loadbmp{sample,g/rgb16-565pal.bmp}
+loadpng{ref,ref_8bit_rgb16-565.png}
+compare{ }
+
+name{Load 16-bit RGB 565 BITFIELDS}
+loadbmp{sample,g/rgb16bfdef.bmp}
+loadpng{ref,ref_8bit_rgb16.png}
+compare{ }
+
+name{Load 16-bit RGB}
+loadbmp{sample,g/rgb16.bmp}
+loadpng{ref,ref_8bit_rgb16.png}
+compare{ }
+
+name{Load 24-bit RGB + Save}
+loadbmp{sample,g/rgb24.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+savebmp{tmp,rgb24out.bmp}
+loadbmp{tmp,rgb24out.bmp}
+compare{ }
+
+name{Load 24-bit RGB + color table}
+loadbmp{sample,g/rgb24pal.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+
+name{Load 32-bit BITFIELDS unusual order}
+loadbmp{sample,g/rgb32bf.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+
+name{Load 32-bit BITFIELDS}
+loadbmp{sample,g/rgb32bfdef.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+
+name{Load 32-bit RGB}
+loadbmp{sample,g/rgb32.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+
+name{Load Huffman}
+loadbmp{sample,q/pal1huffmsb.bmp}
+loadpng{ref,ref_8bit_2bw.png}
+compare{ }
+
+name{Load Huffman as float}
+loadbmp{sample,q/pal1huffmsb.bmp,format:float}
+convertformat{int,8}
+loadpng{ref,ref_8bit_2bw.png}
+compare{ }
+
+name{Load RLE24}
+loadbmp{sample,q/rgb24rle24.bmp}
+savebmp{tmp,rle24.bmp}
+
+name{Load 64-bit}
+loadbmp{sample,q/rgba64.bmp,format:float}
+convertformat{int,8}
+savebmp{tmp,rgba64_to_16bit.bmp}
+
+name{Save 32-bit RGB (load as float)}
+loadbmp{sample,g/rgb32.bmp,format:float}
+savebmp{tmp,rgb32.bmp}
+delete{ }
+loadbmp{tmp,rgb32.bmp}
+loadpng{ref,ref_8bit_255c.png}
+compare{ }
+
+name{Save 64-bit RGB}
+loadbmp{sample,g/rgb32.bmp}
+convertgamma{srgb,linear}savebmp{tmp,rgb64.bmp,64bit: }
+
+name{Save 32-bit RGB}
+loadbmp{sample,g/rgb32.bmp,format:float}
+savebmp{tmp,rgb32_16.bmp,format:int,bufferbits:16}
+
+name{Load 64-bit RGB}
+loadbmp{sample,q/rgba64.bmp}
+savebmp{tmp,rgb64-to-24.bmp,format:int,bufferbits:8}
+
+name{Load 64-bit RGB float linear + convert}
+loadbmp{sample,q/rgba64.bmp,format:float,conv64:linear}
+convertgamma{linear,srgb}
+savebmp{tmp,rgb64fltlin-to-24.bmp,format:int,bufferbits:8}
+
+name{Load 64-bit RGB s2.13 linear + convert}
+loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:linear}
+convertgamma{linear,srgb}
+savebmp{tmp,rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}
+
+name{Load 64-bit RGB s2.13}
+loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:srgb}
+savebmp{tmp,rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}
+
+name{create HDR 64-bit}
+loadpng{ref,almdudler.png}
+convertformat{float,0}
+convertgamma{srgb,linear}
+exposure{fstops:2}
+savebmp{tmp,hdr-64bit.bmp,64bit: }
+
+name{create dark 16-bit}
+loadpng{ref,almdudler.png}
+convertformat{float,0}
+convertgamma{srgb,linear}
+exposure{fstops:-8}
+convertgamma{linear,srgb}
+convertformat{int,16}
+savebmp{tmp,dark16.bmp,outbits:r10g11b11a0}
+
+name{Save big Huffman}
+loadbmp{ref,sw-big.bmp,rgb:index}
+savebmp{tmp,sw-huffout.bmp,rle:auto,allow:huff}
+
+name{Save big Huffman as RGB}
+loadbmp{ref,sw-big.bmp,rgb:index}
+flatten{ }
+savebmp{tmp,sw-huffoutrgb.bmp}
+
+name{Save 8-bit RLE8}
+loadbmp{sample,g/pal8.bmp,rgb:index}
+savebmp{tmp,rle8.bmp,rle:auto}
+loadbmp{tmp,rle8.bmp,rgb:index}
+compare{ }
+
+name{Save 4-bit RLE4}
+loadbmp{sample,g/pal4.bmp,rgb:index}
+savebmp{tmp,rle4.bmp,rle:auto}
+loadbmp{tmp,rle4.bmp,rgb:index}
+compare{ }
+
+name{Save 8-bit RLE24}
+loadbmp{sample,g/rgb24.bmp}
+savebmp{tmp,rle24.bmp,rle:auto,allow:rle24}
+loadbmp{tmp,rle24.bmp,undef:leave}
+compare{ }
+
+name{Save bigger 8-bit RLE24}
+loadbmp{ref,90s.bmp}
+savebmp{tmp,90s_out.bmp,rle:auto,allow:rle24}
+loadbmp{tmp,90s_out.bmp,undef:leave}
+compare{ }

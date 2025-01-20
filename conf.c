@@ -34,6 +34,7 @@
 enum Optnum {
 	OP_VERBOSE,
 	OP_QUIET,
+	OP_TESTFILE,
 	OP_SAMPLEDIR,
 	OP_REFDIR,
 	OP_TMPDIR,
@@ -48,12 +49,13 @@ struct Option {
 	const char       *defaultstr;
 	const char       *envname;
 } s_options[] = {
-	{ OP_VERBOSE,   'v', "verbose", false, NULL,        NULL },
-	{ OP_QUIET,     'q', "quiet",   false, NULL,        NULL },
-	{ OP_SAMPLEDIR, 's', "samples", true , "./samples", "BMPLIBTEST_SAMPLEDIR" },
-	{ OP_REFDIR,    'r', "refs",    true , "./refs",    "BMPLIBTEST_REFDIR" },
-	{ OP_TMPDIR,    't', "tmp",     true , "./tmp",     "BMPLIBTEST_TMPDIR" },
-	{ OP_HELP,      '?', "help",    false, NULL,        NULL },
+	{ OP_VERBOSE,   'v', "verbose", false, NULL,             NULL },
+	{ OP_QUIET,     'q', "quiet",   false, NULL,             NULL },
+	{ OP_TESTFILE,  'f', "file",    true , "./testdefs.txt", "BMPLIBTEST_TESTFILE" },
+	{ OP_SAMPLEDIR, 's', "samples", true , "./samples",      "BMPLIBTEST_SAMPLEDIR" },
+	{ OP_REFDIR,    'r', "refs",    true , "./refs",         "BMPLIBTEST_REFDIR" },
+	{ OP_TMPDIR,    't', "tmp",     true , "./tmp",          "BMPLIBTEST_TMPDIR" },
+	{ OP_HELP,      '?', "help",    false, NULL,             NULL },
 };
 
 static MAY_BE_UNUSED void add_opt_str(char **result, const char *arg);
@@ -113,6 +115,10 @@ static bool do_opt_arg(const char *arg, int op, struct Conf *cmdline)
 
 
 	switch (s_options[op].op) {
+		case OP_TESTFILE:
+			add_opt_str(&cmdline->testfile, arg);
+			break;
+
 		case OP_SAMPLEDIR:
 			add_opt_str(&cmdline->sampledir, arg);
 			break;
@@ -155,6 +161,9 @@ static void load_env_strings(struct Conf *cmdline)
 			continue;
 
 		switch (s_options[i].op) {
+		case OP_TESTFILE:
+			add_opt_str(&cmdline->testfile, str);
+			break;
 		case OP_SAMPLEDIR:
 			add_opt_str(&cmdline->sampledir, str);
 			break;
@@ -184,6 +193,9 @@ static void load_default_strings(struct Conf *cmdline)
 			continue;
 
 		switch (s_options[i].op) {
+		case OP_TESTFILE:
+			add_opt_str(&cmdline->testfile, s_options[i].defaultstr);
+			break;
 		case OP_SAMPLEDIR:
 			add_opt_str(&cmdline->sampledir, s_options[i].defaultstr);
 			break;
@@ -220,6 +232,9 @@ void cmd_usage(void)
 	printf("\t%s [options] [testnums...]\n", PROGRAM_NAME);
 	printf("\n\tIf no test numbers are given, all available tests will be run.\n");
 	printf("\nOptions:\n");
+
+	print_option_with_arg(OP_TESTFILE, "file");
+	printf("\t\tText file with test definitions.\n\n");
 
 	print_option_with_arg(OP_SAMPLEDIR, "sample-dir");
 	printf("\t\tDirectory with sample images.\n\n");
@@ -473,6 +488,8 @@ void cmd_free(struct Conf *cmdline)
 {
 	if (!cmdline)
 		return;
+	if (cmdline->testfile)
+		free(cmdline->testfile);
 	if (cmdline->sampledir)
 		free(cmdline->sampledir);
 	if (cmdline->refdir)

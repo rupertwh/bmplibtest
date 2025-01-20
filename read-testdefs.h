@@ -1,9 +1,8 @@
-/* bmplibtest - conf.h
+/* bmplibtest - read-testdefs.h
  *
- * Copyright (c) 2024-2025, Rupert Weber.
+ * Copyright (c) 2025, Rupert Weber.
  *
  * This file is part of bmplibtest.
- *
  * bmplibtest is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -18,23 +17,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-struct Confstr {
-	struct Confstr *next;
-	char            str[1];
+
+struct Test {
+	struct Test *next;
+	char         str[1];
 };
 
-struct Conf {
-	int                verbose;
-	char              *sampledir;
-	char              *refdir;
-	char              *tmpdir;
-	char              *testfile;
-	bool               env;
-	bool               help;
-	int                nstrings;
-	struct Confstr *strlist;
-};
 
-struct Conf* cmd_parse(int argc, char **argv);
-void cmd_free(struct Conf *cmdline);
-void cmd_usage(void);
+struct Test* read_testdefs(FILE *file);
+void free_testdefs(struct Test *testlist);

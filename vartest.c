@@ -30,260 +30,11 @@
 #include <png.h>
 #include <bmplib.h>
 
+#include "defs.h"
 #include "imgstack.h"
 #include "cmdparser.h"
+#include "read-testdefs.h"
 #include "conf.h"
-
-
-char* testdef[] = {
-
-	"name{Load 1-bit indexed bl/grn}"
-	"loadbmp{sample,g/pal1bg.bmp}; loadpng{ref,ref_8bit_2bg.png};"
-	"compare{};",
-
-	"name{Load 1-bit indexed b/w}; "
-	"loadbmp{sample,g/pal1.bmp}; loadpng{ref,ref_8bit_2bw.png};"
-	"compare{ }",
-
-	"name{Load 1-bit indexed w/b}; "
-	"loadbmp{sample,g/pal1wb.bmp}; loadpng{ref,ref_8bit_2bw.png};"
-	"compare{ }",
-
-	"name{Load 4-bit indexed}; "
-	"loadbmp{sample,g/pal4.bmp}; loadpng{ref,ref_8bit_12c.png};"
-	"compare{ }",
-
-	"name{Load 4-bit indexed gs }; "
-	"loadbmp{sample,g/pal4gs.bmp}; loadpng{ref,ref_8bit_12gs.png};"
-	"compare{ }",
-
-	"name{Load 4-bit RLE}; "
-	"loadbmp{sample,g/pal4rle.bmp}; loadpng{ref,ref_8bit_12c_alpha.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed all zero}; "
-	"loadbmp{sample,g/pal8-0.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed}; "
-	"loadbmp{sample,g/pal8.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed gs}; "
-	"loadbmp{sample,g/pal8gs.bmp}; loadpng{ref,ref_8bit_252gs.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed nonsquare}; "
-	"loadbmp{sample,g/pal8nonsquare.bmp}; loadpng{ref,ref_8bit_252c_nonsquare.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed OS/2}; "
-	"loadbmp{sample,g/pal8os2.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed OS/2 v2 16}; "
-	"loadbmp{sample,q/pal8os2v2-16.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed OS/2 v2 40}; "
-	"loadbmp{sample,q/pal8os2v2-40sz.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed OS/2 v2-sz}; "
-	"loadbmp{sample,q/pal8os2v2-sz.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit RLE}; "
-	"loadbmp{sample,g/pal8rle.bmp}; loadpng{ref,ref_8bit_252c_alpha.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed topdown}; "
-	"loadbmp{sample,g/pal8topdown.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed V4}; "
-	"loadbmp{sample,g/pal8v4.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed V5}; "
-	"loadbmp{sample,g/pal8v5.bmp}; loadpng{ref,ref_8bit_252c.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed w124}; "
-	"loadbmp{sample,g/pal8w124.bmp}; loadpng{ref,ref_8bit_252c_w124.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed w125}; "
-	"loadbmp{sample,g/pal8w125.bmp}; loadpng{ref,ref_8bit_252c_w125.png};"
-	"compare{ }",
-
-	"name{Load 8-bit indexed w126}; "
-	"loadbmp{sample,g/pal8w126.bmp}; loadpng{ref,ref_8bit_252c_w126.png};"
-	"compare{ }",
-
-	"name{Load 16-bit RGB 565}; "
-	"loadbmp{sample,g/rgb16-565.bmp}; loadpng{ref,ref_8bit_rgb16-565.png};"
-	"compare{ }",
-
-	"name{Load 16-bit RGB 565 + color table}; "
-	"loadbmp{sample,g/rgb16-565pal.bmp}; loadpng{ref,ref_8bit_rgb16-565.png};"
-	"compare{ }",
-
-	"name{Load 16-bit RGB 565 BITFIELDS}; "
-	"loadbmp{sample,g/rgb16bfdef.bmp}; loadpng{ref,ref_8bit_rgb16.png};"
-	"compare{ }",
-
-	"name{Load 16-bit RGB}; "
-	"loadbmp{sample,g/rgb16.bmp}; loadpng{ref,ref_8bit_rgb16.png};"
-	"compare{ }",
-
-	"name{Load 24-bit RGB + Save}; "
-	"loadbmp{sample,g/rgb24.bmp}; loadpng{ref,ref_8bit_255c.png};"
-	"compare{ };"
-	"savebmp{tmp,rgb24out.bmp};"
-	"loadbmp{tmp,rgb24out.bmp};"
-	"compare{ }",
-
-	"name{Load 24-bit RGB + color table}; "
-	"loadbmp{sample,g/rgb24pal.bmp}; loadpng{ref,ref_8bit_255c.png};"
-	"compare{ }",
-
-	"name{Load 32-bit BITFIELDS unusual order}; "
-	"loadbmp{sample,g/rgb32bf.bmp}; loadpng{ref,ref_8bit_255c.png};"
-	"compare{ }",
-
-	"name{Load 32-bit BITFIELDS}; "
-	"loadbmp{sample,g/rgb32bfdef.bmp}; loadpng{ref,ref_8bit_255c.png};"
-	"compare{ }",
-
-	"name{Load 32-bit RGB}; "
-	"loadbmp{sample,g/rgb32.bmp}; loadpng{ref,ref_8bit_255c.png};"
-	"compare{ }",
-
-	"name{Load Huffman}; "
-	"loadbmp{sample,q/pal1huffmsb.bmp}; loadpng{ref,ref_8bit_2bw.png};"
-	"compare{ }",
-
-	"name{Load Huffman as float}; "
-	"loadbmp{sample,q/pal1huffmsb.bmp,format:float}; "
-	"convertformat{int,8};"
-	"loadpng{ref,ref_8bit_2bw.png};"
-	"compare{ }",
-
-	"name{Load RLE24}; "
-	"loadbmp{sample,q/rgb24rle24.bmp}; savebmp{tmp,rle24.bmp}",
-
-	"name{Load 64-bit}; "
-	"loadbmp{sample,q/rgba64.bmp,format:float}; convertformat{int,8}; "
-	"savebmp{tmp,rgba64_to_16bit.bmp}",
-	//"loadpng{ref,ref_8bit_255c_alpha64.png};"
-	//"compare{ }",
-
-	"name{Save 32-bit RGB (load as float)}; "
-	"loadbmp{sample,g/rgb32.bmp,format:float}; "
-	"savebmp{tmp,rgb32.bmp}; "
-	"delete{ }; "
-	"loadbmp{tmp,rgb32.bmp}; loadpng{ref,ref_8bit_255c.png}; "
-	"compare{ }",
-
-
-	"name{Save 64-bit RGB}; "
-	"loadbmp{sample,g/rgb32.bmp}; "
-	"convertgamma{srgb,linear}"
-	"savebmp{tmp,rgb64.bmp,64bit: }",
-
-	"name{Save 32-bit RGB}; "
-	"loadbmp{sample,g/rgb32.bmp,format:float};"
-	"savebmp{tmp,rgb32_16.bmp,format:int,bufferbits:16}",
-
-	"name{Load 64-bit RGB}; "
-	"loadbmp{sample,q/rgba64.bmp};"
-	"savebmp{tmp,rgb64-to-24.bmp,format:int,bufferbits:8}",
-
-	"name{Load 64-bit RGB float linear + convert}; "
-	"loadbmp{sample,q/rgba64.bmp,format:float,conv64:linear};"
-	"convertgamma{linear,srgb};"
-	"savebmp{tmp,rgb64fltlin-to-24.bmp,format:int,bufferbits:8}",
-
-	"name{Load 64-bit RGB s2.13 linear + convert}; "
-	"loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:linear};"
-	"convertgamma{linear,srgb};"
-	"savebmp{tmp,rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}",
-
-	"name{Load 64-bit RGB s2.13}; "
-	"loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:srgb};"
-	"savebmp{tmp,rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}",
-
-	"name{create HDR 64-bit};"
-	"loadpng{ref,almdudler.png};"
-	"convertformat{float,0};"
-	"convertgamma{srgb,linear};"
-	"exposure{fstops:2};"
-	"savebmp{tmp,hdr-64bit.bmp,64bit: }",
-
-	"name{create dark 16-bit};"
-	"loadpng{ref,almdudler.png};"
-	"convertformat{float,0};"
-	"convertgamma{srgb,linear};"
-	"exposure{fstops:-8};"
-	"convertgamma{linear,srgb};"
-	"convertformat{int,16};"
-	"savebmp{tmp,dark16.bmp,outbits:r10g11b11a0}",
-
-
-	"name{Save big Huffman}; "
-	"loadbmp{ref,sw-big.bmp,rgb:index};"
-	"savebmp{tmp,sw-huffout.bmp,rle:auto,allow:huff}",
-
-	"name{Save big Huffman as RGB}; "
-	"loadbmp{ref,sw-big.bmp,rgb:index};"
-	"flatten{ };"
-	"savebmp{tmp,sw-huffoutrgb.bmp}",
-
-	"name{Save 8-bit RLE8}; "
-	"loadbmp{sample,g/pal8.bmp,rgb:index};"
-	"savebmp{tmp,rle8.bmp,rle:auto};"
-	"loadbmp{tmp,rle8.bmp,rgb:index};"
-	"compare{ }",
-
-	"name{Save 4-bit RLE4}; "
-	"loadbmp{sample,g/pal4.bmp,rgb:index};"
-	"savebmp{tmp,rle4.bmp,rle:auto};"
-	"loadbmp{tmp,rle4.bmp,rgb:index};"
-	"compare{ }",
-
-	"name{Save 8-bit RLE24}; "
-	"loadbmp{sample,g/rgb24.bmp};"
-	"savebmp{tmp,rle24.bmp,rle:auto,allow:rle24};"
-	"loadbmp{tmp,rle24.bmp,undef:leave};"
-	"compare{ }",
-
-	"name{Save bigger 8-bit RLE24}; "
-	"loadbmp{ref,90s.bmp};"
-	"savebmp{tmp,90s_out.bmp,rle:auto,allow:rle24};"
-	"loadbmp{tmp,90s_out.bmp,undef:leave};"
-	"compare{ }",
-
-//	"name{Save small Huffman}; "
-//	"loadbmp{sample,q/pal1huffmsb.bmp,rgb:index};"
-//	"savebmp{tmp,pal1huffout.bmp,rle:auto,allow:huff}",
-//
-//	"name{re-Save bigl Huffman}; "
-//	"loadbmp{tmp,sw-huffout.bmp};"
-//	"savebmp{tmp,sw-outout.bmp}",
-
-
-//	"name{Save 16-bit PNG as 64bit BMP with exposureed contrast}; "
-//	"loadpng{ref,photo16.png}; "
-//	"convertformat{float,0};"
-//	"convertgamma{srgb,linear};"
-//	"exposure{fstops:2};"
-//	"savebmp{tmp,photo-64bit.bmp,64bit: }",
-
-//	"name{Load huge BMP}; "
-//	"loadbmp{ref,my_test_image_empty.bmp,insane:yes}",
-
-};
 
 
 const unsigned char checkmark[] = {0x20, 0xE2, 0x9C, 0x93, 0};
@@ -301,19 +52,19 @@ static bool perform_convertformat(struct Cmdarg *args);
 static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops, int symmetric);
 static struct Image* pngfile_read(FILE *file);
-static void trim_trailing_slash(char **str);
+static void trim_trailing_slash(char *str);
 
 
-extern char **environ;
-
-struct Conf *conf;
+static struct Conf *conf;
 
 
 int main(int argc, char *argv[])
 {
-	int  numtest;
+	int  testnum = 0;
 	int  bad = 0, good = 0;
 	bool only_selected_tests;
+	struct Test *testlist;
+	FILE        *file;
 
 	if (!(conf = cmd_parse(argc, argv))) {
 		printf("try -? or --help\n");
@@ -327,29 +78,43 @@ int main(int argc, char *argv[])
 
 	only_selected_tests = conf->strlist != NULL;
 
-	trim_trailing_slash(&conf->sampledir);
-	trim_trailing_slash(&conf->refdir);
-	trim_trailing_slash(&conf->tmpdir);
+	trim_trailing_slash(conf->sampledir);
+	trim_trailing_slash(conf->refdir);
+	trim_trailing_slash(conf->tmpdir);
 
 	if (conf->verbose > 0) {
+		printf("test definitions: %s\n", conf->testfile);
 		printf("samples: %s\n", conf->sampledir);
 		printf("ref    : %s\n", conf->refdir);
 		printf("tmp    : %s\n", conf->tmpdir);
 	}
 
-	numtest = sizeof testdef / sizeof testdef[0];
+	if (!conf->testfile) {
+		printf("No testfile specified\n");
+		printf("try -? or --help\n");
+		return 1;
+	}
+	if (!(file = fopen(conf->testfile, "r"))) {
+		perror(conf->testfile);
+		return 1;
+	}
 
-	for (int i = 0; i < numtest; i++) {
+	testlist = read_testdefs(file);
+	fclose(file);
+
+	for (struct Test *test = testlist ; test; test = test->next) {
 		bool        failed = false;
 		bool        first  = true;
-		const char *cmdstr = testdef[i];
+		const char *cmdstr = test->str;
 		struct Confstr **str;
+
+		testnum++;
 
 		if (only_selected_tests) {
 			bool  found = false;
 			char *endptr;
 			for (str = &conf->strlist; *str; str = &(*str)->next) {
-				if (*(*str)->str && i == strtol((*str)->str, &endptr, 10)) {
+				if (*(*str)->str && testnum == strtol((*str)->str, &endptr, 10)) {
 					if (endptr && *endptr != '\0')
 						continue;
 					*str = (*str)->next;
@@ -362,8 +127,11 @@ int main(int argc, char *argv[])
 		}
 
 		imgstack_clear();
-		if (conf->verbose > 0)
-			printf("\n===== Test %02d: ", i);
+
+		if (conf->verbose > 0) {
+			printf("\n===== Test %02d: ", testnum);
+		}
+
 
 		do {
 			char cmdname[160];
@@ -413,6 +181,8 @@ int main(int argc, char *argv[])
 				printf("----passed\n");
 		}
 	}
+
+	free_testdefs(testlist);
 
 	if (conf->strlist) {
 		printf("\nThe following specified tests didn't exist:\n");
@@ -1632,24 +1402,15 @@ abort:
 	return NULL;
 }
 
-static void trim_trailing_slash(char **str)
+static void trim_trailing_slash(char *str)
 {
 	size_t len;
-	char  *tmp;
 
-	if (!(str && *str))
+	if (!str)
 		exit(1);
 
-	len = strlen(*str);
+	len = strlen(str);
 
-	if (!(tmp = malloc(len + 1))) {
-		perror("malloc");
-		exit(1);
-	}
-
-	strcpy(tmp, *str);
-	*str = tmp;
-
-	while (len > 0 && (*str)[len - 1] == '/')
-		(*str)[--len] = 0;
+	while (len > 0 && '/' == str[len - 1])
+		str[--len] = 0;
 }
