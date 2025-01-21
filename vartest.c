@@ -43,7 +43,7 @@ static bool perform(const char *action, struct Cmdarg *args);
 static bool perform_loadbmp(struct Cmdarg *args);
 static bool perform_loadpng(struct Cmdarg *args);
 static bool perform_savebmp(struct Cmdarg *args);
-static bool perform_compare(void);
+static bool perform_compare(struct Cmdarg *args);
 static bool perform_delete(void);
 static bool perform_convertgamma(struct Cmdarg *args);
 static bool perform_flatten(struct Cmdarg *args);
@@ -53,6 +53,8 @@ static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops, int symmetric);
 static struct Image* pngfile_read(FILE *file);
 static void trim_trailing_slash(char *str);
+static bool perform_addalpha(void);
+
 
 
 static struct Conf *conf;
@@ -213,9 +215,11 @@ static bool perform(const char *action, struct Cmdarg *args)
 	else if (!strcmp("savebmp", action))
 		return perform_savebmp(args);
 	else if (!strcmp("compare", action))
-		return perform_compare();
+		return perform_compare(args);
 	else if (!strcmp("delete", action))
 		return perform_delete();
+	else if (!strcmp("addalpha", action))
+		return perform_addalpha();
 	else if (!strcmp("convertgamma", action))
 		return perform_convertgamma(args);
 	else if (!strcmp("convertformat", action))
@@ -688,6 +692,80 @@ abort:
 }
 
 
+static bool perform_addalpha(void)
+{
+	struct Image  *img;
+	size_t         new_size, offnew, offold;
+	unsigned char *tmp;
+	int            bytesperchannel;
+
+	img = imgstack_get(0);
+
+	if (!(img && img->channels == 3)) {
+		printf("Can add alpha channel only to RGB image\n");
+		return false;
+	}
+
+	bytesperchannel = img->bitsperchannel / 8;
+	new_size = (uint64_t) img->width * img->height * 4 * bytesperchannel;
+
+	if (!(tmp = realloc(img->buffer, new_size))) {
+		perror("add alpha");
+		return false;
+	}
+	img->buffer     = tmp;
+	img->buffersize = new_size;
+	img->channels   = 4;
+
+	offnew = img->width * img->height * 4;
+	offold = img->width * img->height * 3;
+
+	while (offold > 0) {
+
+		offnew -= 4;
+		offold -= 3;
+
+		for (int c = 2; c >= 0; c--) {
+			switch (bytesperchannel) {
+			case 1:
+				((uint8_t*)img->buffer)[offnew + c] = ((uint8_t*)img->buffer)[offold + c];
+				break;
+			case 2:
+				((uint16_t*)img->buffer)[offnew + c] = ((uint16_t*)img->buffer)[offold + c];
+				break;
+			case 4:
+				((uint32_t*)img->buffer)[offnew + c] = ((uint32_t*)img->buffer)[offold + c];
+				break;
+			default:
+				printf("wahhh\n");
+				exit(1);
+			}
+		}
+		switch (img->format) {
+		case BMP_FORMAT_FLOAT:
+			((float*)img->buffer)[offnew + 3] = 1.0;
+			break;
+		case BMP_FORMAT_S2_13:
+			((int16_t*)img->buffer)[offnew + 3] = 8192;
+			break;
+		case BMP_FORMAT_INT:
+			switch (bytesperchannel) {
+			case 1:
+				img->buffer[offnew + 3] = 0xff;
+				break;
+			case 2:
+				((uint16_t*)img->buffer)[offnew + 3] = 0xffff;
+				break;
+			case 4:
+				((uint32_t*)img->buffer)[offnew + 3] = 0xffffffff;
+				break;
+			}
+		}
+	}
+	return true;
+}
+
+
 static bool perform_flatten(struct Cmdarg *args)
 {
 	struct Image  *img;
@@ -1117,15 +1195,24 @@ static bool perform_delete(void)
 }
 
 
-static bool perform_compare(void)
+static bool perform_compare(struct Cmdarg *args)
 {
-	int           i;
+	int           i, fuzz = 0;
 	size_t        off, size;
 	struct Image *img[2];
-	uint8_t      *p8l, *p8r;
-	uint16_t     *p16l, *p16r;
-	uint32_t     *p32l, *p32r;
-	int           bytes_per_pixel;
+	const char   *opt, *optval;
+
+	while (args && args->arg) {
+		opt    = args->arg;
+		optval = args->val;
+
+		if (!strcmp(opt, "fuzz")) {
+			fuzz = atol(optval);
+		} else {
+			printf("Warning: unknown option '%s' for compare\n", opt);
+		}
+		args = args->next;
+	}
 
 	for (i = 0; i < 2; i++) {
 		img[i] = imgstack_get(i);
@@ -1143,49 +1230,50 @@ static bool perform_compare(void)
 		return false;
 	}
 
-	bytes_per_pixel = img[0]->bitsperchannel * img[0]->channels / 8;
+	if (img[0]->format != img[1]->format && conf->verbose > -2) {
+		printf("compare: Warning! Images have different pixel formats!\n");
+	}
 
-	size = (size_t)img[0]->width * (size_t)img[0]->height * (size_t)img[0]->channels;
+	size = (size_t)img[0]->width * img[0]->height * img[0]->channels;
 
-	switch (img[0]->bitsperchannel) {
-	case 8:
-		p8l = (uint8_t*) img[0]->buffer;
-		p8r = (uint8_t*) img[1]->buffer;
-		for (off = 0; off < size; off++) {
-			if (p8l[off] != p8r[off]) {
-				printf("compare: pixels don't match (%d vs %d @ %d,%d)\n",
-				        (int) p8l[off], (int) p8r[off],
-				        (int) ((off / bytes_per_pixel) % img[0]->width),
-				        (int) ((off / bytes_per_pixel) / img[0]->width));
+	for (off = 0; off < size; off++) {
+		switch (img[0]->bitsperchannel) {
+		case 8:
+			if (fuzz < abs(((uint8_t*)img[0]->buffer)[off] - ((uint8_t*)img[1]->buffer)[off])) {
+				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				        (unsigned) ((uint8_t*)img[0]->buffer)[off],
+				        (unsigned) ((uint8_t*)img[1]->buffer)[off],
+				        (unsigned) ((off / img[0]->channels) % img[0]->width),
+				        (unsigned) ((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
-		}
-		break;
+			break;
 
-	case 16:
-		p16l = (uint16_t*) img[0]->buffer;
-		p16r = (uint16_t*) img[1]->buffer;
-		for (off = 0; off < size; off++) {
-			if (p16l[off] != p16r[off]) {
-				printf("compare: pixels don't match\n");
+		case 16:
+			if (fuzz < abs(((uint16_t*)img[0]->buffer)[off] - ((uint16_t*)img[1]->buffer)[off])) {
+				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				        (unsigned) ((uint16_t*)img[0]->buffer)[off],
+				        (unsigned) ((uint16_t*)img[1]->buffer)[off],
+				        (unsigned) ((off / img[0]->channels) % img[0]->width),
+				        (unsigned) ((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
-		}
-		break;
+			break;
 
-	case 32:
-		p32l = (uint32_t*) img[0]->buffer;
-		p32r = (uint32_t*) img[1]->buffer;
-		for (off = 0; off < size; off++) {
-			if (p32l[off] != p32r[off]) {
-				printf("compare: pixels don't match\n");
+		case 32:
+			if (fuzz < abs(((uint32_t*)img[0]->buffer)[off] - ((uint32_t*)img[1]->buffer)[off])) {
+				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				        (unsigned) ((uint32_t*)img[0]->buffer)[off],
+				        (unsigned) ((uint32_t*)img[1]->buffer)[off],
+				        (unsigned) ((off / img[0]->channels) % img[0]->width),
+				        (unsigned) ((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
+			break;
+		default:
+			printf("Invalid bitsperchannel (%d) for comparison", img[0]->bitsperchannel);
+			return false;
 		}
-		break;
-	default:
-		printf("Invalid bitsperchannel (%d) for comparison",img[0]->bitsperchannel);
-		return false;
 	}
 	return true;
 }

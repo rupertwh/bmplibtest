@@ -225,12 +225,21 @@ name{Load 64-bit RGB s2.13}
 loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:srgb}
 savebmp{tmp,rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}
 
-name{create HDR 64-bit}
+name{Test HDR 64-bit}
 loadpng{ref,almdudler.png}
 convertformat{float,0}
 convertgamma{srgb,linear}
 exposure{fstops:2}
 savebmp{tmp,hdr-64bit.bmp,64bit: }
+exposure{fstops:-2}
+convertformat{int,8}
+savebmp{tmp,hdr_one.bmp}
+addalpha{}
+loadbmp{tmp,hdr-64bit.bmp,format:float,conv64:linear}
+exposure{fstops:-2}
+convertformat{int,8}
+savebmp{tmp,hdr_two.bmp}
+compare{fuzz:1}
 
 name{create dark 16-bit}
 loadpng{ref,almdudler.png}
