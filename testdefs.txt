@@ -225,21 +225,35 @@ name{Load 64-bit RGB s2.13}
 loadbmp{sample,q/rgba64.bmp,format:s2.13,conv64:srgb}
 savebmp{rgb64s2.13lin-to-24.bmp,format:int,bufferbits:8}
 
-name{Test HDR 64-bit}
-loadpng{ref,almdudler.png}
-convertformat{float,0}
-convertgamma{srgb,linear}
-exposure{fstops:2}
-savebmp{hdr-64bit.bmp,64bit:yes }
-exposure{fstops:-2}
-convertformat{int,8}
-savebmp{hdr_one.bmp}
-addalpha{}
-loadbmp{tmp,hdr-64bit.bmp,format:float,conv64:linear}
-exposure{fstops:-2}
-convertformat{int,8}
-savebmp{hdr_two.bmp}
-compare{fuzz:1}
+#
+# more complicated test
+#
+name          { Test HDR 64-bit }
+#
+# Load PNG and save as 64bit BMP with exposure +2
+#
+loadpng       { ref, almdudler.png }
+convertformat { float, 0 }
+convertgamma  { srgb, linear }
+exposure      { fstops: 2 }
+savebmp       { hdr-64bit.bmp, 64bit: yes }
+#
+# Reset exposure and convert to int8 and add alpha channel
+#
+exposure      { fstops: -2 }
+convertformat { int, 8 }
+addalpha      { }
+#
+# Load the 64bit BMP that we saved above
+#
+loadbmp       { tmp, hdr-64bit.bmp, format: float, conv64: linear }
+#
+# Reset exposure and convert to int8, then compare with previous,
+# allowing slight rounding differences with 'fuzz: 1'
+#
+exposure      { fstops: -2 }
+convertformat { int, 8 }
+compare       { fuzz: 1 }
 
 name{create dark 16-bit}
 loadpng{ref,almdudler.png}
