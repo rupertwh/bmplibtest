@@ -857,7 +857,7 @@ static void convert_gamma(double (*func)(double))
 				d = ((float*)img->buffer)[offs + i];
 				break;
 			case BMP_FORMAT_S2_13:
-				d = ((((int32_t)((uint16_t*)img->buffer)[offs+i])<<16)>>16) / 8192.0;
+				d = ((int16_t*)img->buffer)[offs + i] / 8192.0;
 				break;
 			case BMP_FORMAT_INT:
 				switch (img->bitsperchannel) {
@@ -884,12 +884,14 @@ static void convert_gamma(double (*func)(double))
 				((float*)img->buffer)[offs+i] = (float) d;
 				break;
 			case BMP_FORMAT_S2_13:
-				if (d < -4.0)
+				if (d <= -4.0)
 					u16 = 0x8000;
 				else if (d >= 4.0)
 					u16 = 0x7fff;
-				else
-					u16 = d * 8192.0 + 0.5;
+				else {
+					d   = round(d * 8192.0);
+					u16 = (uint16_t) (0xffff & (int32_t)d);
+				}
 				((uint16_t*)img->buffer)[offs+i] = u16;
 				break;
 			case BMP_FORMAT_INT:
@@ -939,7 +941,7 @@ static void set_exposure(double fstops, int symmetric)
 				d = ((float*)img->buffer)[offs + i];
 				break;
 			case BMP_FORMAT_S2_13:
-				d = ((((int32_t)((uint16_t*)img->buffer)[offs+i])<<16)>>16) / 8192.0;
+				d = ((int16_t*)img->buffer)[offs + i] / 8192.0;
 				break;
 			case BMP_FORMAT_INT:
 				printf("Cannot exposure contrast on int images!\n");
@@ -955,12 +957,14 @@ static void set_exposure(double fstops, int symmetric)
 				((float*)img->buffer)[offs+i] = (float) d;
 				break;
 			case BMP_FORMAT_S2_13:
-				if (d < -4.0)
+				if (d <= -4.0)
 					u16 = 0x8000;
 				else if (d >= 4.0)
 					u16 = 0x7fff;
-				else
-					u16 = d * 8192.0 + 0.5;
+				else {
+					d   = round(d * 8192.0);
+					u16 = (uint16_t) (0xffff & (int32_t)d);
+				}
 				((uint16_t*)img->buffer)[offs+i] = u16;
 				break;
 			default:
@@ -1044,7 +1048,7 @@ static void convert_format(BMPFORMAT format, int bits)
 			d = ((float*)img->buffer)[offs];
 			break;
 		case BMP_FORMAT_S2_13:
-			d = ((((int32_t)((uint16_t*)img->buffer)[offs])<<16)>>16) / 8192.0;
+			d = ((int16_t*)img->buffer)[offs] / 8192.0;
 			break;
 		case BMP_FORMAT_INT:
 			switch (img->bitsperchannel) {
@@ -1068,12 +1072,14 @@ static void convert_format(BMPFORMAT format, int bits)
 			((float*)img->buffer)[offs] = (float) d;
 			break;
 		case BMP_FORMAT_S2_13:
-			if (d < -4.0)
+			if (d <= -4.0)
 				u16 = 0x8000;
 			else if (d >= 4.0)
 				u16 = 0x7fff;
-			else
-				u16 = d * 8192.0 + 0.5;
+			else {
+				d   = round(d * 8192.0);
+				u16 = (uint16_t) (0xffff & (int32_t)d);
+			}
 			((uint16_t*)img->buffer)[offs] = u16;
 			break;
 		case BMP_FORMAT_INT:
