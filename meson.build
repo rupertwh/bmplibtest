@@ -32,7 +32,7 @@ elif get_option('buildtype') == 'release'
 endif
 
 
-executable('vartest',
+executable('bmplibtest',
            'vartest.c',
            'imgstack.c',
            'cmdparser.c',
