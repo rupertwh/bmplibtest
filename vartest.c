@@ -824,7 +824,7 @@ static void convert_linear_to_srgb(void);
 
 static bool perform_convertgamma(struct Cmdarg *args)
 {
-	const char   *from, *to;
+	const char   *from = NULL, *to = NULL;
 
 	if (args) {
 		from = args->arg;
@@ -915,7 +915,7 @@ static void convert_gamma(double (*func)(double))
 	for (px = 0; px < npixels; px++) {
 		size_t offs = px * channels;
 		for (i = 0; i < colorchannels; i++) {
-			double   d;
+			double   d = 0;
 			uint16_t u16;
 
 			switch(img->format) {
@@ -1105,7 +1105,7 @@ static void convert_format(BMPFORMAT format, int bits)
 	}
 
 	for (int i = 0; i < nvals; i++) {
-		double   d;
+		double   d = 0;
 		uint16_t u16;
 		int      offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
 

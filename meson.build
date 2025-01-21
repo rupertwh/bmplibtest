@@ -1,4 +1,4 @@
-project('bmplibtest', 'c', default_options: ['c_std=c11'], version: '0.4.0')
+project('bmplibtest', 'c', default_options: ['c_std=c11'], version: '0.4.1')
 
 cc = meson.get_compiler('c')
 
@@ -27,6 +27,8 @@ configure_file(input : 'config.h.in',
 
 if get_option('buildtype') == 'debug'
   add_global_arguments('-DDEBUG', language : 'c')
+elif get_option('buildtype') == 'release'
+  add_global_arguments('-DNDEBUG', language : 'c')
 endif
 
 
@@ -36,4 +38,5 @@ executable('vartest',
            'cmdparser.c',
            'read-testdefs.c',
            'conf.c',
+           install: true,
            dependencies: [bmpdep, pngdep, mathdep])
