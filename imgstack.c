@@ -58,7 +58,7 @@ struct Image* imgstack_get(int pos)
 	/* pos: 0 == last, 1 == before last... */
 
 	if (pos >= imgcount) {
-		printf("imgstack: invalid pos %d. (stack count=%d)\n", pos, imgcount);
+		printf("\nimgstack: invalid pos %d. (stack count=%d)\n", pos, imgcount);
 		return NULL;
 	}
 

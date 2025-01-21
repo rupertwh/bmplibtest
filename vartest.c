@@ -50,10 +50,12 @@ static bool perform_flatten(struct Cmdarg *args);
 static bool perform_exposure(struct Cmdarg *args);
 static bool perform_convertformat(struct Cmdarg *args);
 static void convert_format(BMPFORMAT format, int bits);
-static void set_exposure(double fstops, int symmetric);
+static void set_exposure(double fstops);
 static struct Image* pngfile_read(FILE *file);
 static void trim_trailing_slash(char *str);
 static bool perform_addalpha(void);
+static inline uint16_t float_to_s2_13(double d);
+static inline double s2_13_to_double(uint16_t s2_13);
 
 
 
@@ -233,10 +235,6 @@ static bool perform(const char *action, struct Cmdarg *args)
 
 	return false;
 }
-
-
-
-
 
 
 static bool perform_loadbmp(struct Cmdarg *args)
@@ -584,7 +582,15 @@ static bool perform_savebmp(struct Cmdarg *args)
 				optvalue = str;
 			}
 		} else if (!strcmp(optname, "64bit")) {
-			set_64bit = true;
+			if (!strcmp(optvalue, "yes"))
+				set_64bit = true;
+			else if (!strcmp(optvalue, "no"))
+				set_64bit = false;
+			else {
+				printf("savebmp: invalid 64bit option %s\n", optvalue);
+				goto abort;
+			}
+
 		} else {
 			printf("savebmp: unknown option %s\n", optname);
 			goto abort;
@@ -592,9 +598,8 @@ static bool perform_savebmp(struct Cmdarg *args)
 		args = args->next;
 	}
 
-	if (!(img = imgstack_get(0))) {
-		goto abort;
-	}
+	if (!(img = imgstack_get(0)))
+		exit(1);
 
 	if (!(file = fopen(path, "wb"))) {
 		perror(path);
@@ -687,9 +692,10 @@ static bool perform_addalpha(void)
 	unsigned char *tmp;
 	int            bytesperchannel;
 
-	img = imgstack_get(0);
+	if (!(img = imgstack_get(0)))
+		exit(1);
 
-	if (!(img && img->channels == 3)) {
+	if (!(img->channels == 3)) {
 		printf("Can add alpha channel only to RGB image\n");
 		return false;
 	}
@@ -760,7 +766,8 @@ static bool perform_flatten(struct Cmdarg *args)
 	size_t         new_size, offnew, offold;
 	unsigned char *tmp;
 
-	img = imgstack_get(0);
+	if (!(img = imgstack_get(0)))
+		exit(1);
 
 	if (!(img->palette && img->channels == 1 && img->bitsperchannel == 8)) {
 		printf("Cannot flatten RGB image\n");
@@ -792,12 +799,11 @@ static bool perform_flatten(struct Cmdarg *args)
 	return true;
 }
 
+
 static bool perform_exposure(struct Cmdarg *args)
 {
 	char   *opt, *optval;
 	double  fstops = 0.0;
-	bool    symmetric = false;
-
 
 	while (args && args->arg) {
 		opt    = args->arg;
@@ -805,14 +811,15 @@ static bool perform_exposure(struct Cmdarg *args)
 
 		if (!strcmp(opt, "fstops")) {
 			fstops = atof(optval);
-		} else if (!strcmp(opt, "symmetric")) {
-			symmetric = true;
+		} else {
+			if (conf->verbose > -2)
+				printf("exposure: unkown option %s\n", opt);
+			return false;
 		}
 		args = args->next;
 	}
-	if (fstops == 0.0)
-		return false;
-	set_exposure(fstops, symmetric);
+	if (fstops != 0.0)
+		set_exposure(fstops);
 	return true;
 }
 
@@ -820,7 +827,6 @@ static bool perform_exposure(struct Cmdarg *args)
 
 static void convert_srgb_to_linear(void);
 static void convert_linear_to_srgb(void);
-
 
 static bool perform_convertgamma(struct Cmdarg *args)
 {
@@ -865,10 +871,12 @@ static double srgb_to_linear(double d);
 static double linear_to_srgb(double d);
 static void convert_gamma(double (*func)(double));
 
+
 static void convert_srgb_to_linear(void)
 {
 	convert_gamma(srgb_to_linear);
 }
+
 
 static void convert_linear_to_srgb(void)
 {
@@ -895,13 +903,15 @@ static double linear_to_srgb(double d)
 	return d;
 }
 
+
 static void convert_gamma(double (*func)(double))
 {
 	struct Image *img;
 	int channels, colorchannels;
 	size_t        i, px, npixels;
-	img = imgstack_get(0);
 
+	if (!(img = imgstack_get(0)))
+		exit(1);
 
 	npixels = img->width * img->height;
 	channels = img->channels;
@@ -916,14 +926,13 @@ static void convert_gamma(double (*func)(double))
 		size_t offs = px * channels;
 		for (i = 0; i < colorchannels; i++) {
 			double   d = 0;
-			uint16_t u16;
 
 			switch(img->format) {
 			case BMP_FORMAT_FLOAT:
 				d = ((float*)img->buffer)[offs + i];
 				break;
 			case BMP_FORMAT_S2_13:
-				d = ((int16_t*)img->buffer)[offs + i] / 8192.0;
+				d = s2_13_to_double(((uint16_t*)img->buffer)[offs + i]);
 				break;
 			case BMP_FORMAT_INT:
 				switch (img->bitsperchannel) {
@@ -950,15 +959,7 @@ static void convert_gamma(double (*func)(double))
 				((float*)img->buffer)[offs+i] = (float) d;
 				break;
 			case BMP_FORMAT_S2_13:
-				if (d <= -4.0)
-					u16 = 0x8000;
-				else if (d >= 4.0)
-					u16 = 0x7fff;
-				else {
-					d   = round(d * 8192.0);
-					u16 = (uint16_t) (0xffff & (int32_t)d);
-				}
-				((uint16_t*)img->buffer)[offs+i] = u16;
+				((uint16_t*)img->buffer)[offs+i] = float_to_s2_13(d);
 				break;
 			case BMP_FORMAT_INT:
 				switch (img->bitsperchannel) {
@@ -979,13 +980,14 @@ static void convert_gamma(double (*func)(double))
 }
 
 
-static void set_exposure(double fstops, int symmetric)
+static void set_exposure(double fstops)
 {
 	struct Image *img;
 	int channels, colorchannels;
-	size_t        i, px, npixels;
-	img = imgstack_get(0);
+	size_t        px, npixels;
 
+	if (!(img = imgstack_get(0)))
+		exit(1);
 
 	npixels = img->width * img->height;
 	channels = img->channels;
@@ -998,43 +1000,39 @@ static void set_exposure(double fstops, int symmetric)
 
 	for (px = 0; px < npixels; px++) {
 		size_t offs = px * channels;
-		for (i = 0; i < colorchannels; i++) {
-			double   d;
-			uint16_t u16;
+		for (int c = 0; c < colorchannels; c++) {
+			double   d = 0;
 
 			switch(img->format) {
 			case BMP_FORMAT_FLOAT:
-				d = ((float*)img->buffer)[offs + i];
+				d = ((float*)img->buffer)[offs + c];
 				break;
 			case BMP_FORMAT_S2_13:
-				d = ((int16_t*)img->buffer)[offs + i] / 8192.0;
+				d = s2_13_to_double(((int16_t*)img->buffer)[offs + c]);
 				break;
 			case BMP_FORMAT_INT:
-				printf("Cannot exposure contrast on int images!\n");
-				exit(1);
+				switch (img->bitsperchannel) {
+				case 8:  d = ( (uint8_t*)img->buffer)[offs + c] / ((1<< 8)-1);    break;
+				case 16: d = ((uint16_t*)img->buffer)[offs + c] / ((1<<16)-1);    break;
+				case 32: d = ((uint32_t*)img->buffer)[offs + c] / ((1ULL<<32)-1); break;
+				}
 			}
 
 			d = d * pow(2, fstops);
-			if (symmetric)
-				d -= pow(2, fstops-1);
 
 			switch (img->format) {
 			case BMP_FORMAT_FLOAT:
-				((float*)img->buffer)[offs+i] = (float) d;
+				((float*)img->buffer)[offs+c] = (float) d;
 				break;
 			case BMP_FORMAT_S2_13:
-				if (d <= -4.0)
-					u16 = 0x8000;
-				else if (d >= 4.0)
-					u16 = 0x7fff;
-				else {
-					d   = round(d * 8192.0);
-					u16 = (uint16_t) (0xffff & (int32_t)d);
+				((uint16_t*)img->buffer)[offs+c] = float_to_s2_13(d);
+				break;
+			case BMP_FORMAT_INT:
+				switch (img->bitsperchannel) {
+				case 8:  ( (uint8_t*)img->buffer)[offs + c] =  (uint8_t) (d * ((1<< 8)-1) + 0.5);    break;
+				case 16: ((uint16_t*)img->buffer)[offs + c] = (uint16_t) (d * ((1<<16)-1) + 0.5);    break;
+				case 32: ((uint32_t*)img->buffer)[offs + c] = (uint32_t) (d * ((1ULL<<32)-1) + 0.5); break;
 				}
-				((uint16_t*)img->buffer)[offs+i] = u16;
-				break;
-			default:
-				break;
 			}
 		}
 	}
@@ -1089,7 +1087,9 @@ static void convert_format(BMPFORMAT format, int bits)
 		exit(1);
 	}
 
-	img = imgstack_get(0);
+	if (!(img = imgstack_get(0)))
+		exit(1);
+
 	if (img->format == format && img->bitsperchannel == bits)
 		return;
 
@@ -1106,7 +1106,6 @@ static void convert_format(BMPFORMAT format, int bits)
 
 	for (int i = 0; i < nvals; i++) {
 		double   d = 0;
-		uint16_t u16;
 		int      offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
 
 		switch (img->format) {
@@ -1114,7 +1113,7 @@ static void convert_format(BMPFORMAT format, int bits)
 			d = ((float*)img->buffer)[offs];
 			break;
 		case BMP_FORMAT_S2_13:
-			d = ((int16_t*)img->buffer)[offs] / 8192.0;
+			d = s2_13_to_double(((int16_t*)img->buffer)[offs]);
 			break;
 		case BMP_FORMAT_INT:
 			switch (img->bitsperchannel) {
@@ -1138,15 +1137,7 @@ static void convert_format(BMPFORMAT format, int bits)
 			((float*)img->buffer)[offs] = (float) d;
 			break;
 		case BMP_FORMAT_S2_13:
-			if (d <= -4.0)
-				u16 = 0x8000;
-			else if (d >= 4.0)
-				u16 = 0x7fff;
-			else {
-				d   = round(d * 8192.0);
-				u16 = (uint16_t) (0xffff & (int32_t)d);
-			}
-			((uint16_t*)img->buffer)[offs] = u16;
+			((uint16_t*)img->buffer)[offs] = float_to_s2_13(d);
 			break;
 		case BMP_FORMAT_INT:
 			switch (bits) {
@@ -1173,7 +1164,6 @@ static void convert_format(BMPFORMAT format, int bits)
 	img->bitsperchannel = bits;
 	img->format = format;
 }
-
 
 
 static bool perform_delete(void)
@@ -1205,7 +1195,7 @@ static bool perform_compare(struct Cmdarg *args)
 	for (i = 0; i < 2; i++) {
 		img[i] = imgstack_get(i);
 		if (!img[i])
-			return false;
+			exit(1);
 	}
 
 	if(!(img[0]->width          == img[1]->width &&
@@ -1265,10 +1255,6 @@ static bool perform_compare(struct Cmdarg *args)
 	}
 	return true;
 }
-
-
-
-
 
 
 static bool perform_loadpng(struct Cmdarg *args)
@@ -1499,4 +1485,24 @@ static void trim_trailing_slash(char *str)
 
 	while (len > 0 && '/' == str[len - 1])
 		str[--len] = 0;
+}
+
+static inline uint16_t float_to_s2_13(double d)
+{
+	uint16_t u16;
+
+	if (d <= -4.0)
+		u16 = 0x8000;
+	else if (d >= 4.0)
+		u16 = 0x7fff;
+	else {
+		d   = round(d * 8192.0);
+		u16 = (uint16_t) (0xffff & (int32_t)d);
+	}
+	return u16;
+}
+
+static inline double s2_13_to_double(uint16_t s2_13)
+{
+	return ((int16_t)s2_13) / 8192.0;
 }

@@ -201,7 +201,7 @@ compare{ }
 
 name{Save 64-bit RGB}
 loadbmp{sample,g/rgb32.bmp}
-convertgamma{srgb,linear}savebmp{rgb64.bmp,64bit: }
+convertgamma{srgb,linear}savebmp{rgb64.bmp,64bit:yes }
 
 name{Save 32-bit RGB}
 loadbmp{sample,g/rgb32.bmp,format:float}
@@ -230,7 +230,7 @@ loadpng{ref,almdudler.png}
 convertformat{float,0}
 convertgamma{srgb,linear}
 exposure{fstops:2}
-savebmp{hdr-64bit.bmp,64bit: }
+savebmp{hdr-64bit.bmp,64bit:yes }
 exposure{fstops:-2}
 convertformat{int,8}
 savebmp{hdr_one.bmp}
