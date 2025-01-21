@@ -1102,6 +1102,7 @@ static void convert_format(BMPFORMAT format, int bits)
 			exit(1);
 		}
 		img->buffer = tmp;
+		img->buffersize = newsize;
 	}
 
 	for (int i = 0; i < nvals; i++) {
