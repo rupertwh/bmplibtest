@@ -103,9 +103,9 @@ int main(int argc, char *argv[])
 	fclose(file);
 
 	for (struct Test *test = testlist ; test; test = test->next) {
-		bool        failed = false;
-		bool        first  = true;
-		const char *cmdstr = test->str;
+		bool failed = false;
+		bool first  = true;
+		const char      *cmdstr = test->str;
 		struct Confstr **str;
 
 		testnum++;
@@ -143,6 +143,10 @@ int main(int argc, char *argv[])
 					if (!strcmp(cmdname, "name")) {
 						if (first && conf->verbose > 0)
 							printf("%s\n", args ? args->arg : "(none)");
+						else if (!first) {
+							printf("Warning: name{} command not as first"
+							       " command of test definition!\n");
+						}
 					} else {
 						if (conf->verbose > 1) {
 							struct Cmdarg *a;

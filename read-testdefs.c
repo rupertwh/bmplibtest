@@ -28,7 +28,7 @@
 #include "read-testdefs.h"
 
 
-static int read_line(FILE *file, char *buf, int size);
+static int read_line(FILE *file, char *buf, int size, bool *comment);
 
 
 struct Test* read_testdefs(FILE *file)
@@ -37,9 +37,10 @@ struct Test* read_testdefs(FILE *file)
 	struct Test **tail = &testlist;
 	int           linelen, testlen = 0;
 	char          linebuf[1024], testbuf[1024];
+	bool          comment;
 
 	do {
-		linelen = read_line(file, linebuf, sizeof linebuf);
+		linelen = read_line(file, linebuf, sizeof linebuf, &comment);
 		if (linelen > 0) {
 			if (testlen + linelen  >= sizeof testbuf) {
 				printf("Test definition too long, max is %d\n", (int) (sizeof testbuf - 1));
@@ -48,8 +49,10 @@ struct Test* read_testdefs(FILE *file)
 			strcpy(testbuf + testlen, linebuf);
 			testlen += linelen;
 		} else if (testlen == 0) {
+			/* skip empty and comment lines while not in a test definition */
 			continue;
-		} else {
+		} else if (!comment) {
+			/* empty non-comment line ends test definition */
 			char *tmp = malloc(testlen + sizeof *testlist);
 			if (!tmp) {
 				perror("malloc test list");
@@ -75,19 +78,21 @@ void free_testdefs(struct Test *testlist)
 	}
 }
 
-static int read_line(FILE *file, char *buf, int size)
+static int read_line(FILE *file, char *buf, int size, bool *comment)
 {
 	int  c, count = 0;
-	bool comment = false, empty = true;
+	bool empty = true;
+
+	*comment = false;
 
 	while (EOF != (c = getc(file))) {
 		if ('\n' == c)
 			break;
 
 		if (empty && '#' == c)
-			comment = true;
+			*comment = true;
 
-		if (comment)
+		if (*comment)
 			continue;
 
 		if (empty)
