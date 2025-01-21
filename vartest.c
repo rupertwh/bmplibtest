@@ -468,7 +468,7 @@ abort:
 
 static bool perform_savebmp(struct Cmdarg *args)
 {
-	const char   *dir = NULL, *fname = NULL;
+	const char   *fname = NULL;
 	const char   *dirpath;
 	char         *optname, *optvalue;
 	char          path[1024];
@@ -491,10 +491,6 @@ static bool perform_savebmp(struct Cmdarg *args)
 	bool          allow_rle24 = false;
 
 	if (args) {
-		dir  = args->arg;
-		args = args->next;
-	}
-	if (args) {
 		fname = args->arg;
 		args  = args->next;
 	}
@@ -504,16 +500,8 @@ static bool perform_savebmp(struct Cmdarg *args)
 		goto abort;
 	}
 
-	if (!strcmp(dir, "sample"))
-		dirpath = conf->sampledir;
-	else if (!strcmp(dir, "tmp"))
-		dirpath = conf->tmpdir;
-	else if (!strcmp(dir, "ref"))
-		dirpath = conf->refdir;
-	else {
-		printf("loadbmp: Invalid dir '%s'", dir);
-		goto abort;
-	}
+	dirpath = conf->tmpdir;
+
 	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
