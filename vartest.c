@@ -43,6 +43,8 @@ static bool perform(const char *action, struct Cmdarg *args);
 static bool perform_loadbmp(struct Cmdarg *args);
 static bool perform_loadpng(struct Cmdarg *args);
 static bool perform_savebmp(struct Cmdarg *args);
+static bool perform_swap(void);
+static bool perform_duplicate(void);
 static bool perform_compare(struct Cmdarg *args);
 static bool perform_delete(void);
 static bool perform_convertgamma(struct Cmdarg *args);
@@ -216,6 +218,10 @@ static bool perform(const char *action, struct Cmdarg *args)
 		return perform_loadpng(args);
 	else if (!strcmp("savebmp", action))
 		return perform_savebmp(args);
+	else if (!strcmp("swap", action))
+		return perform_swap();
+	else if (!strcmp("duplicate", action))
+		return perform_duplicate();
 	else if (!strcmp("compare", action))
 		return perform_compare(args);
 	else if (!strcmp("delete", action))
@@ -685,6 +691,67 @@ abort:
 }
 
 
+static bool perform_swap(void)
+{
+	if (!imgstack_swap())
+		exit(1);
+
+	return true;
+}
+
+static bool perform_duplicate(void)
+{
+	struct Image *img, *newimg = NULL;
+
+	if (!(img = imgstack_get(0)))
+		exit(1);
+
+	if (!(newimg = malloc(sizeof *newimg))) {
+		perror("malloc");
+		goto abort;
+	}
+	memset(newimg, 0, sizeof *newimg);
+
+	if (!(newimg->buffer = malloc(img->buffersize))) {
+		perror("malloc");
+		goto abort;
+	}
+
+	if (img->palette) {
+		if (!(newimg->palette = malloc(img->numcolors * 4))) {
+			perror("malloc");
+			goto abort;
+		}
+		memcpy(newimg->palette, img->palette, img->numcolors * 4);
+		newimg->numcolors = img->numcolors;
+	}
+
+	memcpy(newimg->buffer, img->buffer, img->buffersize);
+
+	newimg->buffersize     = img->buffersize;
+	newimg->width          = img->width;
+	newimg->height         = img->height;
+	newimg->channels       = img->channels;
+	newimg->bitsperchannel = img->bitsperchannel;
+	newimg->format         = img->format;
+	newimg->orientation    = img->orientation;
+
+	if (!imgstack_push(newimg))
+		goto abort;
+
+	return true;
+abort:
+	if (newimg) {
+		if (newimg->buffer)
+			free(newimg->buffer);
+		if (newimg->palette)
+			free(newimg->palette);
+		free(newimg);
+	}
+	return false;
+}
+
+
 static bool perform_addalpha(void)
 {
 	struct Image  *img;
@@ -1093,8 +1160,8 @@ static void convert_format(BMPFORMAT format, int bits)
 	if (img->format == format && img->bitsperchannel == bits)
 		return;
 
-	nvals = (size_t) img->width * (size_t) img->height * (size_t) img->channels;
-	newsize = nvals * (size_t) bits / 8;
+	nvals = (size_t) img->width * img->height * img->channels;
+	newsize = nvals * bits / 8;
 
 	if (newsize > img->buffersize) {
 		if (!(tmp = realloc(img->buffer, newsize))) {
@@ -1143,13 +1210,13 @@ static void convert_format(BMPFORMAT format, int bits)
 		case BMP_FORMAT_INT:
 			switch (bits) {
 			case 8:
-				((uint8_t*)img->buffer)[offs]  = d * (double) 0xffU + 0.5;
+				((uint8_t*)img->buffer)[offs]  = (uint8_t) (d * (double) 0xffU + 0.5);
 				break;
 			case 16:
-				((uint16_t*)img->buffer)[offs] = d * (double) 0xffffU + 0.5;
+				((uint16_t*)img->buffer)[offs] = (uint16_t) (d * (double) 0xffffU + 0.5);
 				break;
 			case 32:
-				((uint32_t*)img->buffer)[offs] = d * (double) 0xffffffffUL + 0.5;
+				((uint32_t*)img->buffer)[offs] = (uint32_t) (d * (double) 0xffffffffUL + 0.5);
 				break;
 			}
 		}

@@ -34,6 +34,7 @@ struct Image {
 
 bool imgstack_push(struct Image *img);
 struct Image* imgstack_get(int pos);
+bool imgstack_swap(void);
 void imgstack_delete(void);
 void imgstack_clear(void);
 void img_free(struct Image *img);

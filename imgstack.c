@@ -53,6 +53,22 @@ bool imgstack_push(struct Image *img)
 }
 
 
+bool imgstack_swap(void)
+{
+	struct Image *tmp;
+
+	if (imgcount < 2) {
+		printf("Trying to swap with fewer than 2 images (%d) on the stack!\n", imgcount);
+		return false;
+	}
+
+	tmp = imgstack[imgcount - 2];
+	imgstack[imgcount - 2] = imgstack[imgcount - 1];
+	imgstack[imgcount - 1] = tmp;
+
+	return true;
+}
+
 struct Image* imgstack_get(int pos)
 {
 	/* pos: 0 == last, 1 == before last... */
