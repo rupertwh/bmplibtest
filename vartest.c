@@ -1079,9 +1079,9 @@ static void set_exposure(double fstops)
 				break;
 			case BMP_FORMAT_INT:
 				switch (img->bitsperchannel) {
-				case 8:  d = ( (uint8_t*)img->buffer)[offs + c] / ((1<< 8)-1);    break;
-				case 16: d = ((uint16_t*)img->buffer)[offs + c] / ((1<<16)-1);    break;
-				case 32: d = ((uint32_t*)img->buffer)[offs + c] / ((1ULL<<32)-1); break;
+				case 8:  d = (double) ( (uint8_t*)img->buffer)[offs + c] / ((1<< 8)-1);    break;
+				case 16: d = (double) ((uint16_t*)img->buffer)[offs + c] / ((1<<16)-1);    break;
+				case 32: d = (double) ((uint32_t*)img->buffer)[offs + c] / ((1ULL<<32)-1); break;
 				}
 			}
 
