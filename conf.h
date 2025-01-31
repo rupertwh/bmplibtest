@@ -35,6 +35,6 @@ struct Conf {
 	struct Confstr *strlist;
 };
 
-struct Conf* cmd_parse(int argc, char **argv);
-void cmd_free(struct Conf *cmdline);
-void cmd_usage(void);
+struct Conf* conf_parse_cmdline(int argc, char **argv);
+void conf_free(struct Conf *cmdline);
+void conf_usage(void);

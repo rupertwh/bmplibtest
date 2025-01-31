@@ -72,13 +72,13 @@ int main(int argc, char *argv[])
 	struct Test *testlist;
 	FILE        *file;
 
-	if (!(conf = cmd_parse(argc, argv))) {
+	if (!(conf = conf_parse_cmdline(argc, argv))) {
 		printf("try -? or --help\n");
 		return 1;
 	}
 
 	if (conf->help) {
-		cmd_usage();
+		conf_usage();
 		return 0;
 	}
 
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 	if (conf->verbose > -1)
 		printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
 	imgstack_destroy();
-	cmd_free(conf);
+	conf_free(conf);
 	return bad;
 }
 

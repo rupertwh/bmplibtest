@@ -214,10 +214,10 @@ static void load_default_strings(struct Conf *cmdline)
 
 
 /********************************************************
- * 	cmd_usage
+ * 	conf_usage
  *******************************************************/
 
-void cmd_usage(void)
+void conf_usage(void)
 {
 	const char *debug;
 
@@ -348,10 +348,10 @@ static int estimate_size(int argc, char **argv)
 
 
 /********************************************************
- * 	cmd_parse
+ * 	conf_parse_cmdline
  *******************************************************/
 
-struct Conf* cmd_parse(int argc, char **argv)
+struct Conf* conf_parse_cmdline(int argc, char **argv)
 {
 	const char       *arg = NULL, *equalsign;
 	int               i, op;
@@ -475,16 +475,16 @@ struct Conf* cmd_parse(int argc, char **argv)
 	return cmdline;
 
 abort:
-	cmd_free(cmdline);
+	conf_free(cmdline);
 	return NULL;
 }
 
 
 /********************************************************
- * 	cmd_free
+ * 	conf_free
  *******************************************************/
 
-void cmd_free(struct Conf *cmdline)
+void conf_free(struct Conf *cmdline)
 {
 	if (!cmdline)
 		return;
