@@ -28,7 +28,8 @@
 #include "read-testdefs.h"
 
 
-static int read_line(FILE *file, char *buf, int size, bool *comment);
+static int read_line(FILE *file, char *buf, int size);
+static int read_line_filter_comments(FILE *file, char *buf, int size);
 
 
 struct Test* read_testdefs(FILE *file)
@@ -37,10 +38,9 @@ struct Test* read_testdefs(FILE *file)
 	struct Test **tail = &testlist;
 	int           linelen, testlen = 0;
 	char          linebuf[1024], testbuf[1024];
-	bool          comment;
 
 	do {
-		linelen = read_line(file, linebuf, sizeof linebuf, &comment);
+		linelen = read_line_filter_comments(file, linebuf, sizeof linebuf);
 		if (linelen > 0) {
 			if (testlen + linelen  >= sizeof testbuf) {
 				printf("Test definition too long, max is %d\n", (int) (sizeof testbuf - 1));
@@ -49,9 +49,9 @@ struct Test* read_testdefs(FILE *file)
 			strcpy(testbuf + testlen, linebuf);
 			testlen += linelen;
 		} else if (testlen == 0) {
-			/* skip empty and comment lines while not in a test definition */
+			/* skip empty lines while not in a test definition */
 			continue;
-		} else if (!comment) {
+		} else {
 			/* empty non-comment line ends test definition */
 			char *tmp = malloc(testlen + sizeof *testlist);
 			if (!tmp) {
@@ -78,27 +78,35 @@ void free_testdefs(struct Test *testlist)
 	}
 }
 
-static int read_line(FILE *file, char *buf, int size, bool *comment)
+
+static int read_line_filter_comments(FILE *file, char *buf, int size)
+{
+	int  count;
+
+	do {
+		count = read_line(file, buf, size);
+	} while ('#' == *buf);
+
+	return count;
+}
+
+static int read_line(FILE *file, char *buf, int size)
 {
 	int  c, count = 0;
 	bool empty = true;
-
-	*comment = false;
 
 	while (EOF != (c = getc(file))) {
 		if ('\n' == c)
 			break;
 
-		if (empty && '#' == c)
-			*comment = true;
+		if (empty) {
+			if (strchr(" \t", c))
+				continue;
+			else
+				empty = false;
+		}
 
-		if (*comment)
-			continue;
-
-		if (empty)
-			empty = false;
-
-		if (count + 2 > size) {
+		if (count + 1 >= size) {
 				printf("Input line too long, max is %d\n", size - 1);
 				exit(1);
 		}
