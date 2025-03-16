@@ -283,10 +283,22 @@ savebmp {rle8.bmp, rle: auto}
 loadbmp {tmp, rle8.bmp, rgb: index}
 compare { }
 
+name    {Save 8-bit indexed}
+loadbmp {sample, g/pal8.bmp, rgb: index}
+savebmp {pal8.bmp, rle: none}
+loadbmp {tmp, pal8.bmp, rgb: index}
+compare { }
+
 name    {Save 4-bit RLE4}
 loadbmp {sample, g/pal4.bmp, rgb: index}
 savebmp {rle4.bmp, rle: auto}
 loadbmp {tmp, rle4.bmp, rgb: index}
+compare { }
+
+name    {Save 4-bit indexed}
+loadbmp {sample, g/pal4.bmp, rgb: index}
+savebmp {pal4.bmp, rle: none}
+loadbmp {tmp, pal4.bmp, rgb: index}
 compare { }
 
 name    {Save 8-bit RLE24}
@@ -299,4 +311,22 @@ name    {Save bigger 8-bit RLE24}
 loadbmp {ref, 90s.bmp}
 savebmp {90s_out.bmp, rle: auto, allow: rle24}
 loadbmp {tmp, 90s_out.bmp, undef: leave}
+compare { }
+
+name    {Save 24bit RGB}
+loadbmp {sample, g/rgb24.bmp}
+savebmp {rgb24.bmp}
+loadbmp {tmp, rgb24.bmp}
+compare { }
+
+name    {Save 32bit RGB}
+loadbmp {sample, g/rgb32.bmp}
+savebmp {rgb32.bmp}
+loadbmp {tmp, rgb32.bmp}
+compare { }
+
+name    {Save 16bit RGB}
+loadbmp {sample, g/rgb16.bmp}
+savebmp {rgb16.bmp}
+loadbmp {tmp, rgb16.bmp}
 compare { }
