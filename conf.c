@@ -616,7 +616,7 @@ static int capped_strlen(const char *str)
 	size_t size = strlen(str);
 
 	if (size > INT_MAX / 2) {
-		printf("Crazy big string: %llu bytes\n", (unsigned long long)size);
+		printf("Crazy big string: %zu bytes\n", size);
 		exit(1);
 	}
 	return (int) size;

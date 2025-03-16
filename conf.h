@@ -24,14 +24,14 @@ struct Confstr {
 };
 
 struct Conf {
-	int                verbose;
-	char              *sampledir;
-	char              *refdir;
-	char              *tmpdir;
-	char              *testfile;
-	bool               env;
-	bool               help;
-	int                nstrings;
+	int             verbose;
+	char           *sampledir;
+	char           *refdir;
+	char           *tmpdir;
+	char           *testfile;
+	bool            env;
+	bool            help;
+	int             nstrings;
 	struct Confstr *strlist;
 };
 
