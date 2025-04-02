@@ -330,3 +330,21 @@ loadbmp {sample, g/rgb16.bmp}
 savebmp {rgb16.bmp}
 loadbmp {tmp, rgb16.bmp}
 compare { }
+
+name    {Test Huffman compression - black on white}
+loadbmp {ref, text-bw.bmp, rgb:index}
+savebmp {text-bw.bmp, rle: auto, allow: huff}
+
+name    {Test Huffman compression - black on white}
+loadbmp {ref, text-bw.bmp, rgb:index}
+invertpalette {}
+savebmp {text-bw-inv.bmp, rle: auto, allow: huff}
+
+name    {Test Huffman compression - white on black}
+loadbmp {ref, text-wb.bmp, rgb:index}
+savebmp {text-wb.bmp, rle: auto, allow: huff}
+
+name    {Test Huffman compression - white on black}
+loadbmp {ref, text-wb.bmp, rgb:index}
+invertpalette {}
+savebmp {text-wb-inv.bmp, rle: auto, allow: huff}

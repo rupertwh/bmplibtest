@@ -51,6 +51,7 @@ static bool perform_convertgamma(struct Cmdarg *args);
 static bool perform_flatten(struct Cmdarg *args);
 static bool perform_exposure(struct Cmdarg *args);
 static bool perform_convertformat(struct Cmdarg *args);
+static bool perform_invertpalette(struct Cmdarg *args);
 static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops);
 static struct Image* pngfile_read(FILE *file);
@@ -116,6 +117,7 @@ int main(int argc, char *argv[])
 
 		testnum++;
 
+		/* if test numbers have been given on command line, skip all other tests */
 		if (only_selected_tests) {
 			bool  found = false;
 			char *endptr;
@@ -232,6 +234,8 @@ static bool perform(const char *action, struct Cmdarg *args)
 		return perform_convertgamma(args);
 	else if (!strcmp("convertformat", action))
 		return perform_convertformat(args);
+	else if (!strcmp("invertpalette", action))
+		return perform_invertpalette(args);
 	else if (!strcmp("flatten", action))
 		return perform_flatten(args);
 	else if (!strcmp("exposure", action))
@@ -1231,6 +1235,34 @@ static void convert_format(BMPFORMAT format, int bits)
 	}
 	img->bitsperchannel = bits;
 	img->format = format;
+}
+
+static bool perform_invertpalette(struct Cmdarg *args)
+{
+	struct Image *img;
+
+	if (!(img = imgstack_get(0)))
+		exit(1);
+
+	if (!(img->palette && img->numcolors > 1)) {
+		printf("invert-palette: image is not indexed\n");
+		exit(1);
+	}
+
+	for (int i = 0; i < img->numcolors / 2; i++) {
+		for (int j = 0; j < 4; j++) {
+			int tmp;
+			tmp = img->palette[4 * i + j];
+			img->palette[4 * i + j] = img->palette[4 * (img->numcolors - i - 1) + j];
+			img->palette[4 * (img->numcolors - i - 1) + j] = tmp;
+		}
+	}
+
+	for (size_t i = 0; i < img->width * img->height; i++) {
+		img->buffer[i] = img->numcolors - img->buffer[i] - 1;
+	}
+
+	return true;
 }
 
 
