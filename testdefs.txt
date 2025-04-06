@@ -333,18 +333,9 @@ compare { }
 
 name    {Test Huffman compression - black on white}
 loadbmp {ref, text-bw.bmp, rgb:index}
-savebmp {text-bw.bmp, rle: auto, allow: huff}
-
-name    {Test Huffman compression - black on white}
-loadbmp {ref, text-bw.bmp, rgb:index}
-invertpalette {}
-savebmp {text-bw-inv.bmp, rle: auto, allow: huff}
-
-name    {Test Huffman compression - white on black}
-loadbmp {ref, text-wb.bmp, rgb:index}
-savebmp {text-wb.bmp, rle: auto, allow: huff}
-
-name    {Test Huffman compression - white on black}
-loadbmp {ref, text-wb.bmp, rgb:index}
-invertpalette {}
-savebmp {text-wb-inv.bmp, rle: auto, allow: huff}
+savebmp {text-bw-huff.bmp, rle: auto, allow: huff}
+savebmp {text-bw_bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0}
+loadbmp {tmp, text-bw-huff.bmp, rgb: index}
+compare {}
+delete  {}
+savebmp {text-bw-rgb.bmp, rle: none}

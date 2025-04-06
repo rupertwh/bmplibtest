@@ -497,6 +497,8 @@ static bool perform_savebmp(struct Cmdarg *args)
 	bool          allow_huff  = false;
 	bool          allow_2bit  = false;
 	bool          allow_rle24 = false;
+	bool          set_huff_fgidx = false;
+	int           huff_fgidx = 1;
 
 	if (args) {
 		fname = args->arg;
@@ -570,6 +572,11 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid allow option %s\n", optvalue);
 				goto abort;
 			}
+		} else if (!strcmp(optname, "huff-fgidx")) {
+
+			huff_fgidx = !!atoi(optvalue);
+			set_huff_fgidx = true;
+
 		} else if (!strcmp(optname, "outbits")) {
 			set_outbits = true;
 			int col;
@@ -645,6 +652,10 @@ static bool perform_savebmp(struct Cmdarg *args)
 
 	if (allow_rle24) {
 		bmpwrite_allow_rle24(h);
+	}
+
+	if (set_huff_fgidx) {
+		bmpwrite_set_huffman_img_fg_idx(h, huff_fgidx);
 	}
 
 	if (img->palette) {
