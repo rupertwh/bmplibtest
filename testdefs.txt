@@ -339,3 +339,13 @@ loadbmp {tmp, text-bw-huff.bmp, rgb: index}
 compare {}
 delete  {}
 savebmp {text-bw-rgb.bmp, rle: none}
+
+name    {Test Huffman compression - t4-black=0}
+loadbmp {ref, text-bw.bmp, rgb:index, huff-t4black: 0}
+savebmp {text-bw-t4-huff.bmp, rle: auto, allow: huff, huff-t4black: 0}
+savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
+         huff-t4black: 0}
+loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
+compare {}
+delete  {}
+savebmp {text-bw-t4-rgb.bmp, rle: none}

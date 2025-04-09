@@ -257,16 +257,14 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	struct Image *img  = NULL;
 	BMPHANDLE     h    = NULL;
 	BMPRESULT     res;
-
 	bool          set_undef = false;
 	BMPUNDEFINED  undefmode;
-
 	bool          set_format = false;
 	BMPFORMAT     format     = BMP_FORMAT_INT;
-
 	bool          set_conv64 = false;
 	BMPCONV64     conv64;
-
+	bool          set_huff_t4black = false;
+	int           huff_t4black = 1;
 	bool          insane       = false;
 	bool          line_by_line = false;
 	bool          index        = false;
@@ -365,6 +363,9 @@ static bool perform_loadbmp(struct Cmdarg *args)
 				printf("loadbmp: invalid insanity value. must be 'yes'");
 				goto abort;
 			}
+		} else if (!strcmp(optname, "huff-t4black")) {
+			huff_t4black = !!atoi(optvalue);
+			set_huff_t4black = true;
 		} else {
 			printf("loadbmp: unknown option %s\n", optname);
 			goto abort;
@@ -381,6 +382,9 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		printf("Couldn't get bmpread handle\n");
 		goto abort;
 	}
+
+	if (set_huff_t4black)
+		bmp_set_huffman_t4black_value(h, huff_t4black);
 
 	if ((res = bmpread_load_info(h))) {
 		if (res == BMP_RESULT_INSANE && insane)
@@ -499,6 +503,8 @@ static bool perform_savebmp(struct Cmdarg *args)
 	bool          allow_rle24 = false;
 	bool          set_huff_fgidx = false;
 	int           huff_fgidx = 1;
+	bool          set_huff_t4black = false;
+	int           huff_t4black = 1;
 
 	if (args) {
 		fname = args->arg;
@@ -576,6 +582,11 @@ static bool perform_savebmp(struct Cmdarg *args)
 
 			huff_fgidx = !!atoi(optvalue);
 			set_huff_fgidx = true;
+
+		} else if (!strcmp(optname, "huff-t4black")) {
+
+			huff_t4black = !!atoi(optvalue);
+			set_huff_t4black = true;
 
 		} else if (!strcmp(optname, "outbits")) {
 			set_outbits = true;
@@ -656,6 +667,10 @@ static bool perform_savebmp(struct Cmdarg *args)
 
 	if (set_huff_fgidx) {
 		bmpwrite_set_huffman_img_fg_idx(h, huff_fgidx);
+	}
+
+	if (set_huff_t4black) {
+		bmp_set_huffman_t4black_value(h, huff_t4black);
 	}
 
 	if (img->palette) {
