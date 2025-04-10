@@ -62,7 +62,7 @@ compare       { fuzz: 1 }
 
 ### Available commands
 
-#### loadbmp
+#### `loadbmp`
 
 Load a BMP image onto the image stack.
 
@@ -75,18 +75,23 @@ Load a BMP image onto the image stack.
   (see `--help`)
 - `<file>` the file name. May include subdirectories, e.g. "g/test.bmp".
 
-  ##### Optional (named) arguments:
-- `line:whole|line` Whether to read the whole image at once, or line-by-line.
-- `rgb:rgb|index` Whether to load indexed images as RGB or index + palette.
-- `undef:alpha|leave` Whether to make undefined pixels in RLE images
+##### Optional (named) arguments:
+
+- `line: whole|line` Whether to read the whole image at once, or line-by-line.
+- `rgb: rgb|index` Whether to load indexed images as RGB or index + palette.
+- `undef: alpha|leave` Whether to make undefined pixels in RLE images
   transparent. (adds an alpha channel to the loaded image)
-- `conv64:srgb|linear` How to convert (or not) 64bit gamma.
-- `format:int|float|s2.13` Specify number format for loaded image.
-- `insane:yes` Load images larger than bmplib's insanity limit.
+- `conv64: srgb|linear` How to convert (or not) 64bit gamma.
+- `format: int|float|s2.13` Specify number format for loaded image.
+- `insane: yes` Load images larger than bmplib's insanity limit.
+- `expect: <BMPRESULT>` Specify BMPRESULT error code to expect, e.g. `expect:
+  BMP_RESULT_PNG`
+- `huff-t4black: 0|1` Specify numerical value (index into color palette) that
+  ITU-T T.4 "black" corresonds to.
 
 -------------------------------------------------------------------------------
 
-#### savebmp
+#### `savebmp`
 
 Save the topmost image on the stack to a BMP file.
 
@@ -96,27 +101,32 @@ Save the topmost image on the stack to a BMP file.
 
 - `<file>` the file name. May include subdirectories, e.g. "abc/test.bmp".
 
-  ##### Optional (named) arguments:
-- `format:int|float|s2.13` Number format used to supply image data to bmplib.
+##### Optional (named) arguments:
+
+- `format: int|float|s2.13` Number format used to supply image data to bmplib.
   Note: the image will be converted to the specified format before saving, and
   the converted image will be left on the stack. Use duplicate{}/delete{} to
   preserve the original. When specifying `format:int`, `bufferbits` must be
   set, as well.
-- `bufferbits` number of bits when specifying `format:int`. Will otherwise be
-  ignored.
-- `rle:auto|rle8|none` Which RLE compression to use. `auto` selects one from
+- `bufferbits: <n>` number of bits when specifying `format:int`. Will otherwise
+  be ignored.
+- `rle: auto|rle8|none` Which RLE compression to use. `auto` selects one from
   RLE4, RLE8, RLE24, or Huffman-1D, depending on the supplied image data
   (and the `allow`-option, see below).
-- `allow:huff|2bit|rle24` allow writing the respective compressions / pixel
+- `allow: huff|2bit|rle24` allow writing the respective compressions / pixel
   formats. Option may be repeated to allow more than one of the posibilites.
-- `outbits:r<n>g<n>b<n>a<n>` Specify the channel bit-depths for the BMP file.
+- `huff-fgidx: 0|1` specify which color index in the image corresponds to the
+  foreground color.
+- `outbits: r<n>g<n>b<n>a<n>` Specify the channel bit-depths for the BMP file.
   E.g. `outbits: r10g10b10a0` to write a 32-bit BMP with RGBA channels
   10-10-10 - 0.
 - `64bit:yes` write a 64bit BMP file.
+- `huff-t4black: 0|1` Specify numerical value (index into color palette) that
+  ITU-T T.4 "black" corresonds to.
 
 -------------------------------------------------------------------------------
 
-#### loadpng
+#### `loadpng`
 
 Load a PNG image onto the image stack.
 
@@ -124,20 +134,20 @@ Load a PNG image onto the image stack.
 
 -------------------------------------------------------------------------------
 
-#### compare
+#### `compare`
 
-Compare the 2 images on top of the stack. Test fails if images are not
+Compare the two topmost images on the stack. Test fails if images are not
 identical.
 
-`compare{fuzz:<n>}`
+`compare{fuzz: <n>}`
 
 ##### Optional (named) arguments:
 
-- `fuzz:<n>` Allow a difference of `n` between pixel values.
+- `fuzz: <n>` Allow a difference of `n` between pixel values.
 
 -------------------------------------------------------------------------------
 
-#### delete
+#### `delete`
 
 Remove the top image from the stack.
 
@@ -145,7 +155,7 @@ Remove the top image from the stack.
 
 -------------------------------------------------------------------------------
 
-#### swap
+#### `swap`
 
 Swap the top two images on the stack.
 
@@ -153,7 +163,7 @@ Swap the top two images on the stack.
 
 -------------------------------------------------------------------------------
 
-#### duplicate
+#### `duplicate`
 
 Duplicate the top image on the stack.
 
@@ -161,7 +171,7 @@ Duplicate the top image on the stack.
 
 -------------------------------------------------------------------------------
 
-#### addalpha
+#### `addalpha`
 
 Add an alpha channel (full opacity) to the top image on the stack.
 
@@ -169,23 +179,23 @@ Add an alpha channel (full opacity) to the top image on the stack.
 
 -------------------------------------------------------------------------------
 
-#### convertgamma
+#### `convertgamma`
 
 Convert the top image on the stack to the specified gamma curve.
 
-`convertgamma{<from>,<to>}`
+`convertgamma{<from>, <to>}`
 
 ##### Mandatory (positional) arguments:
 
-- `<from>`, `<to>` may be one of `srgb` or `linear`
+- `<from>`, `<to>` may each be one of `srgb` or `linear`
 
 -------------------------------------------------------------------------------
 
-#### convertformat
+#### `convertformat`
 
 Convert the top image on the stack to the specified number format.
 
-`convertformat{<format>,<bits>}`
+`convertformat{<format>, <bits>}`
 
 - `<format>` May be one of `int`, `float`, `s2.13`.
 - `<bits>` Only needed for `int` format, otherwise ignored. Must be one of 8,
@@ -193,18 +203,19 @@ Convert the top image on the stack to the specified number format.
 
 -------------------------------------------------------------------------------
 
-#### flatten
+#### `flatten`
 
-Convert the top image on the stack from indexed to RGB.
+Convert the top image on the stack from indexed to 8-bit RGB.
 
 `flatten{}`
 
 -------------------------------------------------------------------------------
 
-#### exposure
+#### `exposure`
 
 Change the exposure (brightness) for the top image on the stack.
 
-`exposure{fstops:<f>}`
+`exposure{fstops: <f>}`
 
-- `fstops:<f>` Positive or negative floating point number.
+##### Mandatory arguments:
+- `fstops: <f>` Positive or negative floating point number.
