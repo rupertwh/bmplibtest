@@ -59,6 +59,7 @@ static void trim_trailing_slash(char *str);
 static bool perform_addalpha(void);
 static inline uint16_t float_to_s2_13(double d);
 static inline double s2_13_to_double(uint16_t s2_13);
+bool bmpresult_from_str(const char *str, BMPRESULT *res);
 
 
 
@@ -249,6 +250,7 @@ static bool perform(const char *action, struct Cmdarg *args)
 
 static bool perform_loadbmp(struct Cmdarg *args)
 {
+	bool          success = false;
 	const char   *dir = NULL, *fname = NULL;
 	const char   *dirpath;
 	char         *optname, *optvalue;
@@ -268,6 +270,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	bool          insane       = false;
 	bool          line_by_line = false;
 	bool          index        = false;
+	BMPRESULT     expected = BMP_RESULT_OK;
 
 	if (args) {
 		dir  = args->arg;
@@ -363,6 +366,11 @@ static bool perform_loadbmp(struct Cmdarg *args)
 				printf("loadbmp: invalid insanity value. must be 'yes'");
 				goto abort;
 			}
+		} else if (!strcmp(optname, "expect")) {
+			if (!bmpresult_from_str(optvalue, &expected)) {
+				printf("loadbmp: invalid expected result '%s'.", optvalue);
+				goto abort;
+			}
 		} else if (!strcmp(optname, "huff-t4black")) {
 			huff_t4black = !!atoi(optvalue);
 			set_huff_t4black = true;
@@ -390,7 +398,9 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		if (res == BMP_RESULT_INSANE && insane)
 			bmpread_set_insanity_limit(h, bmpread_buffersize(h));
 		else {
-			printf("%s\n", bmp_errmsg(h));
+			success = (res == expected);
+			if (!success)
+				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
@@ -422,8 +432,10 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		fflush(stdout);
 		img->numcolors = bmpread_num_palette_colors(h);
 		if (img->numcolors > 0) {
-			if (bmpread_load_palette(h, &img->palette)) {
-				printf("%s\n", bmp_errmsg(h));
+			if ((res = bmpread_load_palette(h, &img->palette))) {
+				success = (res == expected);
+				if (!success)
+					printf("%s\n", bmp_errmsg(h));
 				goto abort;
 			}
 		}
@@ -443,15 +455,19 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		unsigned char *line;
 		for (int y = 0; y < img->height; y++) {
 			line = img->buffer + (uint64_t) y * img->width * img->channels * img->bitsperchannel / 8;
-			if (bmpread_load_line(h, &line)) {
-				printf("%s\n", bmp_errmsg(h));
+			if ((res = bmpread_load_line(h, &line))) {
+				success = (res == expected);
+				if (!success)
+					printf("%s\n", bmp_errmsg(h));
 				goto abort;
 			}
 		}
 
 	} else {
-		if (bmpread_load_image(h, &img->buffer)) {
-			printf("%s\n", bmp_errmsg(h));
+		if ((res = bmpread_load_image(h, &img->buffer))) {
+			success = (res == expected);
+			if (!success)
+				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
@@ -464,8 +480,10 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	if (!imgstack_push(img))
 		goto abort;
 
-	return true;
+	img = NULL;
+	success = (expected == BMP_RESULT_OK);
 
+	/* fall through */
 abort:
 	if (file)
 		fclose(file);
@@ -474,7 +492,7 @@ abort:
 	if (img)
 		free(img);
 
-	return false;
+	return success;
 }
 
 
@@ -1632,3 +1650,27 @@ static inline double s2_13_to_double(uint16_t s2_13)
 {
 	return ((int16_t)s2_13) / 8192.0;
 }
+
+bool bmpresult_from_str(const char *str, BMPRESULT *res)
+{
+	if (!strcmp(str, "BMP_RESULT_OK"))
+		*res = BMP_RESULT_OK;
+	else if (!strcmp(str, "BMP_RESULT_INVALID"))
+		*res = BMP_RESULT_INVALID;
+	else if (!strcmp(str, "BMP_RESULT_TRUNCATED"))
+		*res = BMP_RESULT_TRUNCATED;
+	else if (!strcmp(str, "BMP_RESULT_INSANE"))
+		*res = BMP_RESULT_INSANE;
+	else if (!strcmp(str, "BMP_RESULT_PNG"))
+		*res = BMP_RESULT_PNG;
+	else if (!strcmp(str, "BMP_RESULT_JPEG"))
+		*res = BMP_RESULT_JPEG;
+	else if (!strcmp(str, "BMP_RESULT_ERROR"))
+		*res = BMP_RESULT_ERROR;
+	else
+		return false;
+
+	return true;
+}
+
+

@@ -359,3 +359,15 @@ loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
 compare {}
 delete  {}
 savebmp {text-bw-t4-rgb.bmp, rle: none}
+
+name         {Embedded JPEG}
+loadbmp      {sample, q/rgb24jpeg.bmp, expect: BMP_RESULT_JPEG}
+
+name         {Embedded PNG}
+loadbmp      {sample, q/rgb24png.bmp, expect: BMP_RESULT_PNG}
+
+name         {Really big}
+loadbmp      {sample, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
+
+name         {Bad planes}
+loadbmp      {sample, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
