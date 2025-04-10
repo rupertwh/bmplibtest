@@ -176,6 +176,16 @@ loadbmp {sample, q/pal1huffmsb.bmp}
 loadpng {ref, ref_8bit_2bw.png}
 compare { }
 
+name    {Load Huffman - explicit t4black=1}
+loadbmp {sample, q/pal1huffmsb.bmp, huff-t4black: 1}
+loadpng {ref, ref_8bit_2bw.png}
+compare { }
+
+name    {Load Huffman - explicit t4black=0}
+loadbmp {sample, q/pal1huffmsb.bmp, huff-t4black: 0}
+loadpng {ref, ref_8bit_2bw-neg.png}
+compare { }
+
 name          {Load Huffman as float}
 loadbmp       {sample, q/pal1huffmsb.bmp, format: float}
 convertformat {int, 8}
