@@ -371,3 +371,8 @@ loadbmp      {sample, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
 
 name         {Bad planes}
 loadbmp      {sample, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
+
+name      { load ICC profile }
+loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
+loadpng   { ref, rgb24prof_ign.png }
+compare   { }
