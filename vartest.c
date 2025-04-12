@@ -250,27 +250,30 @@ static bool perform(const char *action, struct Cmdarg *args)
 
 static bool perform_loadbmp(struct Cmdarg *args)
 {
-	bool          success = false;
-	const char   *dir = NULL, *fname = NULL;
-	const char   *dirpath;
-	char         *optname, *optvalue;
-	char          path[1024];
-	FILE         *file = NULL;
-	struct Image *img  = NULL;
-	BMPHANDLE     h    = NULL;
-	BMPRESULT     res;
-	bool          set_undef = false;
-	BMPUNDEFINED  undefmode;
-	bool          set_format = false;
-	BMPFORMAT     format     = BMP_FORMAT_INT;
-	bool          set_conv64 = false;
-	BMPCONV64     conv64;
-	bool          set_huff_t4black = false;
-	int           huff_t4black = 1;
-	bool          insane       = false;
-	bool          line_by_line = false;
-	bool          index        = false;
-	BMPRESULT     expected = BMP_RESULT_OK;
+	bool           success = false;
+	const char    *dir = NULL, *fname = NULL;
+	const char    *dirpath;
+	char          *optname, *optvalue;
+	char           path[1024];
+	FILE          *file = NULL;
+	struct Image  *img  = NULL;
+	BMPHANDLE      h    = NULL;
+	BMPRESULT      res;
+	bool           set_undef = false;
+	BMPUNDEFINED   undefmode;
+	bool           set_format = false;
+	BMPFORMAT      format     = BMP_FORMAT_INT;
+	bool           set_conv64 = false;
+	BMPCONV64      conv64;
+	bool           set_huff_t4black = false;
+	int            huff_t4black = 1;
+	bool           insane       = false;
+	bool           line_by_line = false;
+	bool           index        = false;
+	bool           loadicc = false;
+	bool           icc_loadonly = false;
+	unsigned char *iccprofile = NULL;
+	BMPRESULT      expected = BMP_RESULT_OK;
 
 	if (args) {
 		dir  = args->arg;
@@ -371,6 +374,18 @@ static bool perform_loadbmp(struct Cmdarg *args)
 				printf("loadbmp: invalid expected result '%s'.", optvalue);
 				goto abort;
 			}
+		} else if (!strcmp(optname, "iccprofile")) {
+			if (!strcmp(optvalue, "loadonly")) {
+				icc_loadonly = true;
+			}
+			else if (!strcmp(optvalue, "apply")) {
+				icc_loadonly = false;
+			}
+			else {
+				printf("loadbmp: invalid option '%s' for iccprofile.", optvalue);
+				goto abort;
+			}
+			loadicc = true;
 		} else if (!strcmp(optname, "huff-t4black")) {
 			huff_t4black = !!atoi(optvalue);
 			set_huff_t4black = true;
@@ -403,6 +418,23 @@ static bool perform_loadbmp(struct Cmdarg *args)
 				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
+	}
+
+	if (loadicc) {
+
+		size_t profile_size = bmpread_iccprofile_size(h);
+		if (!profile_size) {
+			printf("no valid profile in file\n");
+			goto abort;
+		}
+		if ((res = bmpread_load_iccprofile(h, &iccprofile))) {
+			success = (res == expected);
+			if (!success)
+				printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
+		if (conf->verbose > 1)
+			printf("Successfully loaded profile (size %lu bytes).\n", (unsigned long) profile_size);
 	}
 
 	if (set_undef)
@@ -489,6 +521,8 @@ abort:
 		fclose(file);
 	if (h)
 		bmp_free(h);
+	if (iccprofile)
+		free(iccprofile);
 	if (img)
 		free(img);
 
