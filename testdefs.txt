@@ -371,3 +371,9 @@ loadbmp      {sample, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
 
 name         {Bad planes}
 loadbmp      {sample, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
+
+name         {Truncated}
+loadbmp      {sample, b/shortfile.bmp, expect: BMP_RESULT_TRUNCATED}
+
+name         {Invalid pixels}
+loadbmp      {sample, b/pal8badindex.bmp, expect: BMP_RESULT_INVALID}
