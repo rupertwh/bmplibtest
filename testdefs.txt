@@ -376,3 +376,9 @@ name      { load ICC profile }
 loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
 loadpng   { ref, rgb24prof_ign.png }
 compare   { }
+
+name      { write ICC profile }
+loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
+savebmp   { rgb24prof.bmp, iccprofile: embed }
+loadbmp   { tmp, rgb24prof.bmp, iccprofile: loadonly }
+savebmp   { rgb24prof2.bmp, iccprofile: embed }

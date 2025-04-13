@@ -272,7 +272,6 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	bool           index        = false;
 	bool           loadicc = false;
 	bool           icc_loadonly = false;
-	unsigned char *iccprofile = NULL;
 	BMPRESULT      expected = BMP_RESULT_OK;
 
 	if (args) {
@@ -420,22 +419,6 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		}
 	}
 
-	if (loadicc) {
-
-		size_t profile_size = bmpread_iccprofile_size(h);
-		if (!profile_size) {
-			printf("no valid profile in file\n");
-			goto abort;
-		}
-		if ((res = bmpread_load_iccprofile(h, &iccprofile))) {
-			success = (res == expected);
-			if (!success)
-				printf("%s\n", bmp_errmsg(h));
-			goto abort;
-		}
-		if (conf->verbose > 1)
-			printf("Successfully loaded profile (size %lu bytes).\n", (unsigned long) profile_size);
-	}
 
 	if (set_undef)
 		bmpread_set_undefined(h, undefmode);
@@ -445,6 +428,23 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		goto abort;
 	}
 	memset(img, 0, sizeof *img);
+
+	if (loadicc) {
+
+		img->iccprofile_size = bmpread_iccprofile_size(h);
+		if (!img->iccprofile_size) {
+			printf("no valid profile in file\n");
+			goto abort;
+		}
+		if ((res = bmpread_load_iccprofile(h, &img->iccprofile))) {
+			success = (res == expected);
+			if (!success)
+				printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
+		if (conf->verbose > 1)
+			printf("Successfully loaded profile (size %lu bytes).\n", (unsigned long) img->iccprofile_size);
+	}
 
 	if (set_conv64) {
 		if (bmpread_set_64bit_conv(h, conv64)) {
@@ -521,10 +521,8 @@ abort:
 		fclose(file);
 	if (h)
 		bmp_free(h);
-	if (iccprofile)
-		free(iccprofile);
 	if (img)
-		free(img);
+		img_free(img);
 
 	return success;
 }
@@ -557,6 +555,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 	int           huff_fgidx = 1;
 	bool          set_huff_t4black = false;
 	int           huff_t4black = 1;
+	bool          icc_embed = false;
 
 	if (args) {
 		fname = args->arg;
@@ -671,6 +670,14 @@ static bool perform_savebmp(struct Cmdarg *args)
 				goto abort;
 			}
 
+		}  else if (!strcmp(optname, "iccprofile")) {
+			if (!strcmp(optvalue, "embed"))
+				icc_embed = true;
+			else {
+				printf("savebmp: invalid iccprofile option %s\n", optvalue);
+				goto abort;
+			}
+
 		} else {
 			printf("savebmp: unknown option %s\n", optname);
 			goto abort;
@@ -737,6 +744,14 @@ static bool perform_savebmp(struct Cmdarg *args)
 			goto abort;
 		}
 	}
+
+	if (icc_embed && img->iccprofile_size > 0) {
+		if (bmpwrite_set_iccprofile(h, img->iccprofile_size, img->iccprofile)) {
+			printf("Couldn't set ICC profile: %s\n", bmp_errmsg(h));
+			goto abort;
+		}
+	}
+
 	if (set_format && format != img->format) {
 		if (format == BMP_FORMAT_INT && !bufferbits) {
 			printf("cannot set output INT w/o specifying bits\n");

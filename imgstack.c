@@ -116,6 +116,8 @@ void img_free(struct Image *img)
 			free(img->buffer);
 		if (img->palette)
 			free(img->palette);
+		if (img->iccprofile)
+			free(img->iccprofile);
 	}
 	free(img);
 }
