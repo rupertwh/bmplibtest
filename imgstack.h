@@ -23,6 +23,8 @@ struct Image {
 	size_t         buffersize;
 	unsigned char *palette;
 	int            numcolors;
+	unsigned char *iccprofile;
+	size_t         iccprofile_size;
 	int            width;
 	int            height;
 	int            channels;
