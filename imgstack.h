@@ -29,6 +29,8 @@ struct Image {
 	int            height;
 	int            channels;
 	int            bitsperchannel;
+	int            xdpi;
+	int            ydpi;
 	BMPFORMAT      format;
 	BMPORIENT      orientation;
 };

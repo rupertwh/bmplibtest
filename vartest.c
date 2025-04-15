@@ -429,6 +429,9 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	}
 	memset(img, 0, sizeof *img);
 
+	img->xdpi = bmpread_resolution_xdpi(h);
+	img->ydpi = bmpread_resolution_ydpi(h);
+
 	if (loadicc) {
 
 		img->iccprofile_size = bmpread_iccprofile_size(h);
@@ -766,6 +769,10 @@ static bool perform_savebmp(struct Cmdarg *args)
 	if (bmpwrite_set_dimensions(h, img->width, img->height, img->channels, img->bitsperchannel)) {
 		printf("set dimensions: %s\n", bmp_errmsg(h));
 		goto abort;
+	}
+
+	if (img->xdpi || img->ydpi) {
+		bmpwrite_set_resolution(h, img->xdpi, img->ydpi);
 	}
 
 	if (bmpwrite_save_image(h, img->buffer)) {
