@@ -748,7 +748,11 @@ static bool perform_savebmp(struct Cmdarg *args)
 		}
 	}
 
-	if (icc_embed && img->iccprofile_size > 0) {
+	if (icc_embed) {
+		if (img->iccprofile_size <= 0) {
+			printf("Source image has no ICC profile.");
+			goto abort;
+		}
 		if (bmpwrite_set_iccprofile(h, img->iccprofile_size, img->iccprofile)) {
 			printf("Couldn't set ICC profile: %s\n", bmp_errmsg(h));
 			goto abort;
