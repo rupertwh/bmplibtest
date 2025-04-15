@@ -40,12 +40,14 @@
 const unsigned char checkmark[] = {0x20, 0xE2, 0x9C, 0x93, 0};
 
 static bool perform(const char *action, struct Cmdarg *args);
+static bool perform_loadraw(struct Cmdarg *args);
 static bool perform_loadbmp(struct Cmdarg *args);
 static bool perform_loadpng(struct Cmdarg *args);
 static bool perform_savebmp(struct Cmdarg *args);
 static bool perform_swap(void);
 static bool perform_duplicate(void);
 static bool perform_compare(struct Cmdarg *args);
+static bool perform_rawcompare(struct Cmdarg *args);
 static bool perform_delete(void);
 static bool perform_convertgamma(struct Cmdarg *args);
 static bool perform_flatten(struct Cmdarg *args);
@@ -64,6 +66,7 @@ bool bmpresult_from_str(const char *str, BMPRESULT *res);
 
 
 static struct Conf *conf;
+static FILE        *rawfile = NULL;
 
 
 int main(int argc, char *argv[])
@@ -197,6 +200,11 @@ int main(int argc, char *argv[])
 
 	free_testdefs(testlist);
 
+	if (rawfile) {
+		fclose(rawfile);
+		rawfile = NULL;
+	}
+
 	if (conf->strlist) {
 		printf("\nThe following specified tests didn't exist:\n");
 		for (struct Confstr *str = conf->strlist; str; str = str->next) {
@@ -217,6 +225,8 @@ static bool perform(const char *action, struct Cmdarg *args)
 {
 	if (!strcmp("loadbmp", action))
 		return perform_loadbmp(args);
+	else if (!strcmp("loadraw", action))
+		return perform_loadraw(args);
 	else if (!strcmp("loadpng", action))
 		return perform_loadpng(args);
 	else if (!strcmp("savebmp", action))
@@ -227,6 +237,8 @@ static bool perform(const char *action, struct Cmdarg *args)
 		return perform_duplicate();
 	else if (!strcmp("compare", action))
 		return perform_compare(args);
+	else if (!strcmp("rawcompare", action))
+		return perform_rawcompare(args);
 	else if (!strcmp("delete", action))
 		return perform_delete();
 	else if (!strcmp("addalpha", action))
@@ -246,6 +258,65 @@ static bool perform(const char *action, struct Cmdarg *args)
 
 	return false;
 }
+
+static bool loadraw(const char *filespec)
+{
+
+	if (rawfile) {
+		fclose(rawfile);
+		rawfile = NULL;
+	}
+
+	if (!(rawfile = fopen(filespec, "rb"))) {
+		perror(filespec);
+		return false;
+	}
+	return true;
+}
+
+static bool perform_loadraw(struct Cmdarg *args)
+{
+	const char    *dir = NULL, *fname = NULL;
+	const char    *dirpath;
+	char           path[1024];
+
+	if (rawfile) {
+		fclose(rawfile);
+		rawfile = NULL;
+	}
+
+	if (args) {
+		dir  = args->arg;
+		args = args->next;
+		if (args) {
+			fname = args->arg;
+			args  = args->next;
+		}
+	}
+
+	if (!(fname && *fname)) {
+		printf("loadbmp: invalid filespec\n");
+		return false;
+	}
+
+	if (!strcmp(dir, "sample"))
+		dirpath = conf->sampledir;
+	else if (!strcmp(dir, "tmp"))
+		dirpath = conf->tmpdir;
+	else if (!strcmp(dir, "ref"))
+		dirpath = conf->refdir;
+	else {
+		printf("loadraw: Invalid dir '%s'\n", dir);
+		return false;
+	}
+	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+		printf("loadraw: path too small!");
+		exit(1);
+	}
+
+	return loadraw(path);
+}
+
 
 
 static bool perform_loadbmp(struct Cmdarg *args)
@@ -299,17 +370,15 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		goto abort;
 	}
 	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
-		printf("path too small!");
+		printf("loadbmp: path too small!");
 		exit(1);
 	}
 
 	while (args && args->arg) {
 		optname  = args->arg;
 		optvalue = args->val;
-		if (!optvalue) {
-			printf("loadbmp: invalid option '%s'\n", optname);
-			goto abort;
-		}
+		if (!optvalue)
+			optvalue = "";
 
 		if (!strcmp(optname, "line")) {
 			if (!strcmp(optvalue, "whole"))
@@ -317,7 +386,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "line"))
 				line_by_line = true;
 			else {
-				printf("loadbmp: invalid line mode %s\n", optvalue);
+				printf("loadbmp: invalid line mode '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "rgb")) {
@@ -326,7 +395,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "index"))
 				index = true;
 			else {
-				printf("loadbmp: invalid rgb mode %s\n", optvalue);
+				printf("loadbmp: invalid rgb mode '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "undef")) {
@@ -336,7 +405,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "leave"))
 				undefmode = BMP_UNDEFINED_LEAVE;
 			else {
-				printf("loadbmp: invalid undef mode %s\n", optvalue);
+				printf("loadbmp: invalid undef mode '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "conv64")) {
@@ -346,7 +415,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "linear"))
 				conv64 = BMP_CONV64_LINEAR;
 			else {
-				printf("loadbmp: invalid conv64 mode %s\n", optvalue);
+				printf("loadbmp: invalid conv64 mode '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "format")) {
@@ -358,7 +427,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "s2.13"))
 				format = BMP_FORMAT_S2_13;
 			else {
-				printf("loadbmp: invalid number format %s\n", optvalue);
+				printf("loadbmp: invalid number format '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "insane")) {
@@ -389,7 +458,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 			huff_t4black = !!atoi(optvalue);
 			set_huff_t4black = true;
 		} else {
-			printf("loadbmp: unknown option %s\n", optname);
+			printf("loadbmp: unknown option '%s'\n", optname);
 			goto abort;
 		}
 		args = args->next;
@@ -432,7 +501,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	img->xdpi = bmpread_resolution_xdpi(h);
 	img->ydpi = bmpread_resolution_ydpi(h);
 
-	if (loadicc) {
+	if (loadicc && icc_loadonly) {
 
 		img->iccprofile_size = bmpread_iccprofile_size(h);
 		if (!img->iccprofile_size) {
@@ -554,11 +623,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 	bool          allow_huff  = false;
 	bool          allow_2bit  = false;
 	bool          allow_rle24 = false;
-	bool          set_huff_fgidx = false;
-	int           huff_fgidx = 1;
+	bool          set_huff_fgidx   = false;
+	int           huff_fgidx       = 1;
 	bool          set_huff_t4black = false;
-	int           huff_t4black = 1;
+	int           huff_t4black     = 1;
 	bool          icc_embed = false;
+	bool          loadraw_after_save = false;
 
 	if (args) {
 		fname = args->arg;
@@ -580,10 +650,8 @@ static bool perform_savebmp(struct Cmdarg *args)
 	while (args && args->arg) {
 		optname  = args->arg;
 		optvalue = args->val;
-		if (!optvalue) {
-			printf("savebmp: invalid option '%s'\n", optname);
-			goto abort;
-		}
+		if (!optvalue)
+			optvalue = "";
 
 		if (!strcmp(optname, "bufferbits")) {
 			bufferbits = atol(optvalue);
@@ -606,7 +674,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "s2.13"))
 				format = BMP_FORMAT_S2_13;
 			else {
-				printf("savebmp: invalid number format %s\n", optvalue);
+				printf("savebmp: invalid number format '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "rle")) {
@@ -618,7 +686,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "none"))
 				rle = BMP_RLE_NONE;
 			else {
-				printf("savebmp: invalid rle option %s\n", optvalue);
+				printf("savebmp: invalid rle option '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "allow")) {
@@ -629,9 +697,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "rle24"))
 				allow_rle24 = true;
 			else {
-				printf("savebmp: invalid allow option %s\n", optvalue);
+				printf("savebmp: invalid allow option '%s'\n", optvalue);
 				goto abort;
 			}
+		} else if (!strcmp(optname, "loadraw")) {
+			loadraw_after_save = true;
+
 		} else if (!strcmp(optname, "huff-fgidx")) {
 
 			huff_fgidx = !!atoi(optvalue);
@@ -653,7 +724,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 				case 'b': col = 2; break;
 				case 'a': col = 3; break;
 				default:
-					printf("savebmp: invalid outbits %s\n", optvalue);
+					printf("savebmp: invalid outbits '%s'\n", optvalue);
 					goto abort;
 				}
 				outbits[col] = strtol(++optvalue, &str, 10);
@@ -669,7 +740,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 			else if (!strcmp(optvalue, "no"))
 				set_64bit = false;
 			else {
-				printf("savebmp: invalid 64bit option %s\n", optvalue);
+				printf("savebmp: invalid 64bit option '%s'\n", optvalue);
 				goto abort;
 			}
 
@@ -677,7 +748,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 			if (!strcmp(optvalue, "embed"))
 				icc_embed = true;
 			else {
-				printf("savebmp: invalid iccprofile option %s\n", optvalue);
+				printf("savebmp: invalid iccprofile option '%s'\n", optvalue);
 				goto abort;
 			}
 
@@ -787,6 +858,10 @@ static bool perform_savebmp(struct Cmdarg *args)
 	bmp_free(h);
 	fclose(file);
 
+	if (loadraw_after_save) {
+		return loadraw(path);
+	}
+
 	return true;
 
 abort:
@@ -796,6 +871,106 @@ abort:
 		bmp_free(h);
 
 	return false;
+}
+
+
+static int hexval(const char *str)
+{
+	int hex = 0;
+
+	for (int i = 0; i < 2; i++) {
+		int digit;
+		if ('0' <= str[i] && str[i] <= '9')
+			digit = str[i] - '0';
+		else if ('A' <= str[i] && str[i] <= 'F')
+			digit = str[i] - 'A' + 10;
+		else if ('a' <= str[i] && str[i] <= 'f')
+			digit = str[i] - 'a' + 10;
+		else
+			return -1;
+		hex = hex * 16 + digit;
+	}
+	return hex;
+}
+
+static bool perform_rawcompare(struct Cmdarg *args)
+{
+	const int    maxbytes = 100;
+	const char  *offsetstr = NULL, *sizestr = NULL, *hexstr = NULL;
+	long         offset;
+	int          size, byte;
+	uint8_t      bytes[maxbytes];
+
+	if (args) {
+		offsetstr = args->arg;
+		args      = args->next;
+		if (args) {
+			sizestr = args->arg;
+			args    = args->next;
+		}
+			if (args) {
+				hexstr = args->arg;
+				args   = args->next;
+			}
+	}
+
+	if (!(hexstr && *hexstr)) {
+		printf("rawcompare: invalid arguments\n");
+		return false;
+	}
+
+	if (!rawfile) {
+		printf("rawcompare: no raw file loaded\n");
+		return false;
+	}
+
+	offset = atol(offsetstr);
+	size   = atoi(sizestr);
+
+	if (size < 1 || size > maxbytes) {
+		printf("rawcompare: invalid size (%d, max is %d).\n",
+			size, maxbytes);
+		return false;
+	}
+
+	size_t hexlen = strlen(hexstr);
+	if (hexlen != (size_t) size * 2) {
+		printf("rawcompare: invalid length of hex string (is %zu, should be %d).\n",
+			hexlen, size * 2);
+		return false;
+	}
+
+	if (offset < 0) {
+		printf("rawcompare: invalid offset (%ld)\n", offset);
+		return false;
+	}
+
+	if (fseek(rawfile, offset, SEEK_SET)) {
+		perror("rawcompare: seeking to offset");
+		return false;
+	}
+	if (size != fread(bytes, 1, size, rawfile)) {
+		if (feof(rawfile))
+			printf("rawcompare: EOF while reading bytes\n");
+		else
+			perror("rawcompare: reading bytes");
+		return false;
+	}
+
+	for (int i = 0; i < size; i++) {
+		byte = hexval(&hexstr[2 * i]);
+		if (byte == -1) {
+			printf("rawcompare: invalid hex value\n");
+			return false;
+		}
+		if (byte != bytes[i]) {
+			printf("rawcompare: mismatch on byte %d: Is 0x%02x, should be 0x%02x\n",
+				i, (unsigned)bytes[i], (unsigned)byte);
+			return false;
+		}
+	}
+
+	return true;
 }
 
 

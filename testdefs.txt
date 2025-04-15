@@ -354,7 +354,9 @@ name    {Test Huffman compression - t4-black=0}
 loadbmp {ref, text-bw.bmp, rgb:index, huff-t4black: 0}
 savebmp {text-bw-t4-huff.bmp, rle: auto, allow: huff, huff-t4black: 0}
 savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
-         huff-t4black: 0}
+         huff-t4black: 0, loadraw }
+rawcompare { 28, 2, 0100 }     # bitcount
+rawcompare { 30, 4, 03000000 } # compression
 loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
 compare {}
 delete  {}
@@ -383,8 +385,10 @@ loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
 loadpng   { ref, rgb24prof_ign.png }
 compare   { }
 
-name      { write ICC profile }
-loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
-savebmp   { rgb24prof.bmp, iccprofile: embed }
-loadbmp   { tmp, rgb24prof.bmp, iccprofile: loadonly }
-savebmp   { rgb24prof2.bmp, iccprofile: embed }
+name       { write ICC profile }
+loadbmp    { sample, q/rgb24prof.bmp, iccprofile: loadonly }
+savebmp    { rgb24prof.bmp, iccprofile: embed }
+loadbmp    { tmp, rgb24prof.bmp, iccprofile: loadonly}
+savebmp    { rgb24prof2.bmp, iccprofile: embed, loadraw }
+#loadraw    { tmp, rgb24prof.bmp }
+rawcompare { 126, 4, 7c600000 }

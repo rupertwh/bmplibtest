@@ -125,6 +125,7 @@ Save the topmost image on the stack to a BMP file.
 - `64bit:yes` write a 64bit BMP file.
 - `iccprofile: embed` Embeds the ICC profile into the BMP file. (profile must
   have been loaded using the `iccprofile` option with `loadbmp`.)
+- `loadraw` Immediately after writing, do a `loadraw` of the written image.
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that
   ITU-T T.4 "black" corresonds to.
 
@@ -149,11 +150,37 @@ identical.
 
 - `fuzz: <n>` Allow a difference of `n` between pixel values.
 
+
+-------------------------------------------------------------------------------
+
+#### `loadraw`
+
+```loadraw { <dir>, <file> }```
+
+Load a raw file to make `rawcompare` comparisons with known values. Raw files
+are not pushed onto the image stack. There can only be one raw file loaded at a
+time.
+
+Alternatively, as a shortcut,  `loadraw` can be specified as an argument to `savebmp` (s.a.). The result is the same as explicitly loading it with `loadraw{}`.
+
+-------------------------------------------------------------------------------
+
+#### `rawcompare`
+
+```rawcompare { <offset>, <size>, <bytes> }```
+
+Compare portions of the last file loaded with `loadraw` against the specified
+values. `offset` and `size` specify where in the file and how many bytes are to
+be compared. `bytes` is a string of hexadecimal numbers, e.g.:
+
+```rawcompare { 0, 2, 424d }```
+
+N.B.: No endianess conversion or interpretation of bytes in the raw file takes
+place. Bytes must be listed in the order which they have in the file.
+
 -------------------------------------------------------------------------------
 
 #### `delete`
-
-Remove the top image from the stack.
 
 ```delete {}```
 
