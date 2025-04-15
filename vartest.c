@@ -834,6 +834,15 @@ static bool perform_duplicate(void)
 		newimg->numcolors = img->numcolors;
 	}
 
+	if (img->iccprofile) {
+		if (!(newimg->iccprofile = malloc(img->iccprofile_size))) {
+			perror("malloc");
+			goto abort;
+		}
+		memcpy(newimg->iccprofile, img->iccprofile, img->iccprofile_size);
+		newimg->iccprofile_size = img->iccprofile_size;
+	}
+
 	memcpy(newimg->buffer, img->buffer, img->buffersize);
 
 	newimg->buffersize     = img->buffersize;
