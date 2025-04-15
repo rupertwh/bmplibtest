@@ -66,7 +66,7 @@ compare       { fuzz: 1 }
 
 Load a BMP image onto the image stack.
 
-`loadbmp{<dir>,<file>,...}`
+```loadbmp { <dir>, <file>, ... }```
 
 ##### Mandatory (positional) arguments:
 
@@ -86,6 +86,8 @@ Load a BMP image onto the image stack.
 - `insane: yes` Load images larger than bmplib's insanity limit.
 - `expect: <BMPRESULT>` Specify BMPRESULT error code to expect, e.g. `expect:
   BMP_RESULT_PNG`
+- `iccprofile: loadonly` Load an embedded ICC profile. (`loadonly` is currently
+  the only option, might add `apply` in the future.)
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that
   ITU-T T.4 "black" corresonds to.
 
@@ -95,7 +97,7 @@ Load a BMP image onto the image stack.
 
 Save the topmost image on the stack to a BMP file.
 
-`savebmp{<file>,...}`
+```savebmp { <file>, ... }```
 
 ##### Mandatory (positional) arguments:
 
@@ -121,6 +123,8 @@ Save the topmost image on the stack to a BMP file.
   E.g. `outbits: r10g10b10a0` to write a 32-bit BMP with RGBA channels
   10-10-10 - 0.
 - `64bit:yes` write a 64bit BMP file.
+- `iccprofile: embed` Embeds the ICC profile into the BMP file. (profile must
+  have been loaded using the `iccprofile` option with `loadbmp`.)
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that
   ITU-T T.4 "black" corresonds to.
 
@@ -130,7 +134,7 @@ Save the topmost image on the stack to a BMP file.
 
 Load a PNG image onto the image stack.
 
-`loadpng{<dir>,<file>}`
+```loadpng { <dir>, <file> }```
 
 -------------------------------------------------------------------------------
 
@@ -139,7 +143,7 @@ Load a PNG image onto the image stack.
 Compare the two topmost images on the stack. Test fails if images are not
 identical.
 
-`compare{fuzz: <n>}`
+```compare { fuzz: <n> }```
 
 ##### Optional (named) arguments:
 
@@ -151,7 +155,7 @@ identical.
 
 Remove the top image from the stack.
 
-`delete{}`
+```delete {}```
 
 -------------------------------------------------------------------------------
 
@@ -159,7 +163,7 @@ Remove the top image from the stack.
 
 Swap the top two images on the stack.
 
-`swap{}`
+```swap {}```
 
 -------------------------------------------------------------------------------
 
@@ -167,7 +171,7 @@ Swap the top two images on the stack.
 
 Duplicate the top image on the stack.
 
-`duplicate{}`
+```duplicate {}```
 
 -------------------------------------------------------------------------------
 
@@ -175,7 +179,7 @@ Duplicate the top image on the stack.
 
 Add an alpha channel (full opacity) to the top image on the stack.
 
-`addalpha{}`
+```addalpha {}```
 
 -------------------------------------------------------------------------------
 
@@ -183,7 +187,7 @@ Add an alpha channel (full opacity) to the top image on the stack.
 
 Convert the top image on the stack to the specified gamma curve.
 
-`convertgamma{<from>, <to>}`
+```convertgamma { <from>, <to> }```
 
 ##### Mandatory (positional) arguments:
 
@@ -195,7 +199,7 @@ Convert the top image on the stack to the specified gamma curve.
 
 Convert the top image on the stack to the specified number format.
 
-`convertformat{<format>, <bits>}`
+```convertformat { <format>, <bits> }```
 
 - `<format>` May be one of `int`, `float`, `s2.13`.
 - `<bits>` Only needed for `int` format, otherwise ignored. Must be one of 8,
@@ -207,7 +211,7 @@ Convert the top image on the stack to the specified number format.
 
 Convert the top image on the stack from indexed to 8-bit RGB.
 
-`flatten{}`
+```flatten {}```
 
 -------------------------------------------------------------------------------
 
@@ -215,7 +219,7 @@ Convert the top image on the stack from indexed to 8-bit RGB.
 
 Change the exposure (brightness) for the top image on the stack.
 
-`exposure{fstops: <f>}`
+```exposure { fstops: <f> }```
 
 ##### Mandatory arguments:
 - `fstops: <f>` Positive or negative floating point number.
