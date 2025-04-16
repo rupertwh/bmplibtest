@@ -62,6 +62,7 @@ static bool perform_addalpha(void);
 static inline uint16_t float_to_s2_13(double d);
 static inline double s2_13_to_double(uint16_t s2_13);
 bool bmpresult_from_str(const char *str, BMPRESULT *res);
+bool rendering_intent_from_str(const char *str, BMPINTENT *intent);
 
 
 
@@ -609,13 +610,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 	FILE         *file = NULL;
 	struct Image *img  = NULL;
 	BMPHANDLE     h    = NULL;
-
 	bool          set_format = false;
 	BMPFORMAT     format;
-
 	bool          set_rle = false;
 	BMPRLETYPE    rle;
-
+	bool          set_intent = false;
+	BMPINTENT     intent = BMP_INTENT_NONE;
 	int           bufferbits  = 0;
 	bool          set_outbits = false;
 	int           outbits[4]  = {0,0,0,0};
@@ -751,7 +751,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 				printf("savebmp: invalid iccprofile option '%s'\n", optvalue);
 				goto abort;
 			}
-
+		} else if (!strcmp(optname, "intent")) {
+			if (!rendering_intent_from_str(optvalue, &intent)) {
+				printf("savebmp: invalid intent '%s'.", optvalue);
+				goto abort;
+			}
+			set_intent = true;
 		} else {
 			printf("savebmp: unknown option %s\n", optname);
 			goto abort;
@@ -830,6 +835,12 @@ static bool perform_savebmp(struct Cmdarg *args)
 		}
 	}
 
+	if (set_intent) {
+		if (bmpwrite_set_rendering_intent(h, intent)) {
+			printf("Setting intent: %s\n", bmp_errmsg(h));
+			goto abort;
+		}
+	}
 	if (set_format && format != img->format) {
 		if (format == BMP_FORMAT_INT && !bufferbits) {
 			printf("cannot set output INT w/o specifying bits\n");
@@ -1917,4 +1928,22 @@ bool bmpresult_from_str(const char *str, BMPRESULT *res)
 	return true;
 }
 
+
+bool rendering_intent_from_str(const char *str, BMPINTENT *intent)
+{
+	if (!strcmp(str, "NONE"))
+		*intent = BMP_INTENT_NONE;
+	else if (!strcmp(str, "BUSINESS"))
+		*intent = BMP_INTENT_BUSINESS;
+	else if (!strcmp(str, "GRAPHICS"))
+		*intent = BMP_INTENT_GRAPHICS;
+	else if (!strcmp(str, "IMAGES"))
+		*intent = BMP_INTENT_IMAGES;
+	else if (!strcmp(str, "ABS"))
+		*intent = BMP_INTENT_ABS_COLORIMETRIC;
+	else
+		return false;
+
+	return true;
+}
 

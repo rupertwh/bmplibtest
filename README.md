@@ -125,6 +125,9 @@ Save the topmost image on the stack to a BMP file.
 - `64bit:yes` write a 64bit BMP file.
 - `iccprofile: embed` Embeds the ICC profile into the BMP file. (profile must
   have been loaded using the `iccprofile` option with `loadbmp`.)
+- `intent: NONE|BUSINESS|GRAPHICS|IMAGES|ABS` Specify the rendering intent.
+  (`BUSINESS`=saturation, `GRAPHICS`=relative colorimetric,
+  `IMAGES`=perceptive, `ABS`=absolute colorimetric)
 - `loadraw` Immediately after writing, do a `loadraw` of the written image.
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that
   ITU-T T.4 "black" corresonds to.

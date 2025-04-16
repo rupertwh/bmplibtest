@@ -355,8 +355,8 @@ loadbmp {ref, text-bw.bmp, rgb:index, huff-t4black: 0}
 savebmp {text-bw-t4-huff.bmp, rle: auto, allow: huff, huff-t4black: 0}
 savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
          huff-t4black: 0, loadraw }
-rawcompare { 28, 2, 0100 }     # bitcount
-rawcompare { 30, 4, 03000000 } # compression
+rawcompare { 28, 2, 0100 }
+rawcompare { 30, 4, 03000000 }
 loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
 compare {}
 delete  {}
@@ -389,6 +389,13 @@ name       { write ICC profile }
 loadbmp    { sample, q/rgb24prof.bmp, iccprofile: loadonly }
 savebmp    { rgb24prof.bmp, iccprofile: embed }
 loadbmp    { tmp, rgb24prof.bmp, iccprofile: loadonly}
-savebmp    { rgb24prof2.bmp, iccprofile: embed, loadraw }
-#loadraw    { tmp, rgb24prof.bmp }
+savebmp    { rgb24prof2.bmp, iccprofile: embed, loadraw, intent: GRAPHICS }
+# profile offset:
 rawcompare { 126, 4, 7c600000 }
+# rendering intent:
+rawcompare { 122, 4, 02000000 }
+
+name       { write rendering intent w/o profile }
+loadbmp    { sample, g/rgb24.bmp }
+savebmp    { intent.bmp, loadraw, intent: IMAGES }
+rawcompare { 122, 4, 04000000 }
