@@ -975,8 +975,8 @@ static bool perform_rawcompare(struct Cmdarg *args)
 			return false;
 		}
 		if (byte != bytes[i]) {
-			printf("rawcompare: mismatch on byte %d: Is 0x%02x, should be 0x%02x\n",
-				i, (unsigned)bytes[i], (unsigned)byte);
+			printf("rawcompare: mismatch on byte %d: Is 0x%02x (%d), should be 0x%02x (%d)\n",
+				i, (unsigned)bytes[i], (int)bytes[i], (unsigned)byte, (int) byte);
 			return false;
 		}
 	}

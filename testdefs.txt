@@ -147,7 +147,8 @@ name    {Load 24-bit RGB + Save}
 loadbmp {sample, g/rgb24.bmp}
 loadpng {ref, ref_8bit_255c.png}
 compare { }
-savebmp {rgb24out.bmp}
+savebmp {rgb24out.bmp, loadraw }
+rawcompare {14, 4, 28000000  }
 loadbmp {tmp, rgb24out.bmp}
 compare { }
 
@@ -193,8 +194,13 @@ loadpng       {ref, ref_8bit_2bw.png}
 compare       { }
 
 name    {Load RLE24}
-loadbmp {sample, q/rgb24rle24.bmp}
-savebmp {rle24.bmp}
+loadbmp {sample, q/rgb24rle24.bmp, undef: leave}
+savebmp {rle24.bmp, loadraw}
+# header size
+rawcompare {14, 4, 28000000  }
+# compression 0=BI_RGB
+rawcompare { 30, 4, 00000000 }
+
 
 name          {Load 64-bit}
 loadbmp       {sample, q/rgba64.bmp, format: float}
@@ -280,7 +286,9 @@ savebmp       {dark16.bmp, outbits: r10g11b11a0}
 
 name    {Save big Huffman}
 loadbmp {ref, sw-big.bmp, rgb: index}
-savebmp {sw-huffout.bmp, rle: auto, allow: huff}
+savebmp {sw-huffout.bmp, rle: auto, allow: huff, loadraw}
+# header size
+rawcompare {14, 4, 40000000  }
 
 name    {Save big Huffman as RGB}
 loadbmp {ref, sw-big.bmp, rgb: index}
@@ -355,7 +363,9 @@ loadbmp {ref, text-bw.bmp, rgb:index, huff-t4black: 0}
 savebmp {text-bw-t4-huff.bmp, rle: auto, allow: huff, huff-t4black: 0}
 savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
          huff-t4black: 0, loadraw }
+# bitcount
 rawcompare { 28, 2, 0100 }
+# compression
 rawcompare { 30, 4, 03000000 }
 loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
 compare {}
