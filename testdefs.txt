@@ -152,6 +152,21 @@ rawcompare {14, 4, 28000000  }
 loadbmp {tmp, rgb24out.bmp}
 compare { }
 
+name    {Load 24-bit RGB line-by-line + Save}
+loadbmp {sample, g/rgb24.bmp, line: line}
+loadpng {ref, ref_8bit_255c.png}
+compare { }
+savebmp {rgb24out-line.bmp, line: line, loadraw }
+rawcompare {14, 4, 28000000  }
+loadbmp {tmp, rgb24out-line.bmp}
+compare { }
+
+name    {Load and save 8-bit RLE line-by-line}
+loadbmp {sample, g/pal8rle.bmp, line: line, rgb: index, undef: leave}
+savebmp {pal8-rle-line.bmp, rle: auto, line: line}
+loadbmp {tmp, pal8-rle-line.bmp, rgb: index, undef: leave}
+compare { }
+
 name    {Load 24-bit RGB + color table}
 loadbmp {sample, g/rgb24pal.bmp}
 loadpng {ref, ref_8bit_255c.png}
@@ -287,7 +302,7 @@ savebmp       {dark16.bmp, outbits: r10g11b11a0}
 name    {Save big Huffman}
 loadbmp {ref, sw-big.bmp, rgb: index}
 savebmp {sw-huffout.bmp, rle: auto, allow: huff, loadraw}
-# header size
+# header size = 64
 rawcompare {14, 4, 40000000  }
 
 name    {Save big Huffman as RGB}

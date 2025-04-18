@@ -345,6 +345,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	bool           loadicc = false;
 	bool           icc_loadonly = false;
 	BMPRESULT      expected = BMP_RESULT_OK;
+	BMPORIENT      orientation;
 
 	if (args) {
 		dir  = args->arg;
@@ -551,6 +552,7 @@ static bool perform_loadbmp(struct Cmdarg *args)
 	img->channels = bmpread_channels(h);
 	img->bitsperchannel = bmpread_bitsperchannel(h);
 	img->buffersize     = bmpread_buffersize(h);
+	orientation = bmpread_orientation(h);
 
 	if (line_by_line) {
 		if (!(img->buffer = malloc(img->buffersize))) {
@@ -559,7 +561,8 @@ static bool perform_loadbmp(struct Cmdarg *args)
 		}
 		unsigned char *line;
 		for (int y = 0; y < img->height; y++) {
-			line = img->buffer + (uint64_t) y * img->width * img->channels * img->bitsperchannel / 8;
+			int real_y = orientation == BMP_ORIENT_TOPDOWN ? y : img->height - y - 1;
+			line = img->buffer + (uint64_t) real_y * img->width * img->channels * img->bitsperchannel / 8;
 			if ((res = bmpread_load_line(h, &line))) {
 				success = (res == expected);
 				if (!success)
@@ -629,6 +632,7 @@ static bool perform_savebmp(struct Cmdarg *args)
 	int           huff_t4black     = 1;
 	bool          icc_embed = false;
 	bool          loadraw_after_save = false;
+	bool          line_by_line = false;
 
 	if (args) {
 		fname = args->arg;
@@ -663,6 +667,15 @@ static bool perform_savebmp(struct Cmdarg *args)
 				break;
 			default:
 				printf("savebmp: invalid bufferbits (%d)\n", bufferbits);
+				goto abort;
+			}
+		} else if (!strcmp(optname, "line")) {
+			if (!strcmp(optvalue, "whole"))
+				line_by_line = false;
+			else if (!strcmp(optvalue, "line"))
+				line_by_line = true;
+			else {
+				printf("savebmp: invalid line mode '%s'\n", optvalue);
 				goto abort;
 			}
 		} else if (!strcmp(optname, "format")) {
@@ -861,9 +874,20 @@ static bool perform_savebmp(struct Cmdarg *args)
 		bmpwrite_set_resolution(h, img->xdpi, img->ydpi);
 	}
 
-	if (bmpwrite_save_image(h, img->buffer)) {
-		printf("%s\n", bmp_errmsg(h));
-		goto abort;
+	if (line_by_line) {
+		for (int y = 0; y < img->height; y++) {
+			int real_y = img->height - y - 1;
+			unsigned char *line = img->buffer + (uint64_t) real_y * img->width * img->channels * img->bitsperchannel / 8;
+			if (bmpwrite_save_line(h, line)) {
+				printf("%s\n", bmp_errmsg(h));
+				goto abort;
+			}
+		}
+	} else {
+		if (bmpwrite_save_image(h, img->buffer)) {
+			printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
 	}
 
 	bmp_free(h);
