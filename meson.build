@@ -35,8 +35,7 @@ endif
 executable('bmplibtest',
            'vartest.c',
            'imgstack.c',
-           'cmdparser.c',
-           'read-testdefs.c',
+           'testparser.c',
            'conf.c',
            install: true,
            dependencies: [bmpdep, pngdep, mathdep])

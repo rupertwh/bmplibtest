@@ -1,4 +1,4 @@
-/* bmplibtest - read-testdefs.h
+/* bmplibtest - testparser.h
  *
  * Copyright (c) 2025, Rupert Weber.
  *
@@ -18,11 +18,23 @@
  */
 
 
-struct Test {
-	struct Test *next;
-	char         str[1];
+struct TestArgument {
+	struct TestArgument *next;
+	char                *argname;
+	char                *argvalue;
 };
 
+struct TestCommand {
+	struct TestCommand  *next;
+	char                *cmdname;
+	struct TestArgument *arglist;
+};
 
-struct Test* read_testdefs(FILE *file);
-void free_testdefs(struct Test *testlist);
+struct Test {
+	struct Test         *next;
+	char                *descr;
+	struct  TestCommand *cmdlist;
+};
+
+struct Test* parse_test_definitions(FILE *file);
+void free_testlist(struct Test *list);

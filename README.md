@@ -13,51 +13,53 @@ The test parser is very simplisitic, no quoting, escaping or even nesting.
 Leading and trailing white space around commands, options, and their values is
 ignored.
 
-Every test consists of a series of commands. Tests are separated by blank lines.
+Every test consists of a series of commands, enclosed in a `test { ... }` block.
+A test description can be added in parentheses between the `test` keyword and the opening curly brace, e.g.: `test (Load a RGB24 file) { ... }`
 
-Commands may be (but don't have to be) separated from each other with white
-space or semicolons.
+Commands may be (but don't have to be) separated from each other with any amount and type of white space.
 
-Lines starting with '#' are comments. (Comment lines do not count as separators
-between tests.)
+Comments can be added with `#`.
 
 Example, defining two tests ("Load 8-bit indexed" and "Test HDR 64-bit"):
 
 ```
 # simple test; load a BMP file and compare against a reference PNG
-name{Load 8-bit indexed}
-loadbmp{sample,g/pal8.bmp}; loadpng{ref,ref_8bit_252c.png}
-compare{}
+test (Load 8-bit indexed) {
+  loadbmp {sample, g/pal8.bmp}
+  loadpng {ref, ref_8bit_252c.png}
+  compare {}
+}
 
 #
 # more complicated test
 #
-name          { Test HDR 64-bit }
-#
-# Load PNG and save as 64bit BMP with exposure +2
-#
-loadpng       { ref, almdudler.png }
-convertformat { float, 0 }
-convertgamma  { srgb, linear }
-exposure      { fstops: 2 }
-savebmp       { hdr-64bit.bmp, 64bit: yes }
-#
-# Reset exposure and convert to int8 and add alpha channel
-#
-exposure      { fstops: -2 }
-convertformat { int, 8 }
-addalpha      { }
-#
-# Load the 64bit BMP that we saved above
-#
-loadbmp       { tmp, hdr-64bit.bmp, format: float, conv64: linear }
-#
-# Reset exposure and convert to int8, then compare with previous,
-# allowing slight rounding differences with 'fuzz: 1'
-#
-exposure      { fstops: -2 }
-convertformat { int, 8 }
-compare       { fuzz: 1 }
+test ( Test HDR 64-bit ) {
+  #
+  # Load PNG and save as 64bit BMP with exposure +2
+  #
+  loadpng       { ref, almdudler.png }
+  convertformat { float, 0 }
+  convertgamma  { srgb, linear }
+  exposure      { fstops: 2 } # results in values beyong [0..1] range
+  savebmp       { hdr-64bit.bmp, 64bit: yes }
+  #
+  # Reset exposure and convert to int8 and add alpha channel
+  #
+  exposure      { fstops: -2 }
+  convertformat { int, 8 }
+  addalpha      { }
+  #
+  # Load the 64bit BMP that we saved above
+  #
+  loadbmp       { tmp, hdr-64bit.bmp, format: float, conv64: linear }
+  #
+  # Reset exposure and convert to int8, then compare with previous,
+  # allowing slight rounding differences with 'fuzz: 1'
+  #
+  exposure      { fstops: -2 }
+  convertformat { int, 8 }
+  compare       { fuzz: 1 }
+}
 ```
 
 ### Available commands
