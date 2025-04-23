@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 		for (struct TestCommand *command = test->cmdlist; command; command = command->next) {
 
 			if (conf->verbose > 1) {
-				printf("-+'%s'\n", command->cmdname);
+				printf("--'%s'\n", command->cmdname);
 				for (struct TestArgument *arg = command->arglist; arg; arg = arg->next) {
 					if (arg->argvalue && *arg->argvalue)
 						printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 		} else {
 			good++;
 			if (conf->verbose > 0)
-				printf("----passed\n");
+				printf("passed%s\n", checkmark);
 		}
 	}
 
@@ -487,8 +487,8 @@ static bool perform_loadbmp(struct TestArgument *args)
 				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
-		if (conf->verbose > 1)
-			printf("Successfully loaded profile (size %lu bytes).\n", (unsigned long) img->iccprofile_size);
+		if (conf->verbose > 2)
+			printf("     Successfully loaded profile (size %lu bytes).\n", (unsigned long) img->iccprofile_size);
 	}
 
 	if (set_conv64) {
@@ -551,8 +551,8 @@ static bool perform_loadbmp(struct TestArgument *args)
 		}
 	}
 
-	if (conf->verbose > 1)
-		printf("Image %s loaded\n", path);
+	if (conf->verbose > 2)
+		printf("     Image %s loaded\n", path);
 	bmp_free(h); h = NULL;
 	fclose(file); file = NULL;
 
