@@ -64,7 +64,6 @@ bool bmpresult_from_str(const char *str, BMPRESULT *res);
 bool rendering_intent_from_str(const char *str, BMPINTENT *intent);
 
 
-
 static struct Conf *conf;
 static FILE        *rawfile = NULL;
 
@@ -170,7 +169,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	free_testlist(testlist);
+	free_testlist();
 
 	if (rawfile) {
 		fclose(rawfile);

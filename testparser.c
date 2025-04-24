@@ -67,14 +67,45 @@ static struct TestArgument **currarglist = NULL;
 static char  *s_currbuffer = NULL;
 static int    s_used = 0;
 
+static int    idx     = 0;
+static char **buffers = NULL;
+
+
+struct Test* parse_test_definitions(FILE *file)
+{
+	char keyword[30];
+
+	while (read_keyword(file, keyword, sizeof keyword)) {
+		if (!strcmp(keyword, "test")) {
+			ct_test(file);
+		} else {
+			printf("Unkown keyword on line %zu: '%s'\n", line, keyword);
+			exit(1);
+		}
+	}
+
+	#ifdef NEVER
+	dumpall();
+	#endif
+
+	return testlist;
+}
+
+void free_testlist(void)
+{
+	for (int i = 0; i < idx; i++)
+		free(buffers[i]);
+	free(buffers);
+}
+
+
+
 static void buffers_ensure_space(int nbytes, bool aligned)
 {
 	static const int   size    = 8 * 1024; /* size of a single buffer      */
 	static const int   nmax    = 1000;     /* max number of buffers        */
 	static const int   nincr   = 16;       /* number of buffers to grow by */
 	static int         nalloc  = 0;
-	static int         idx     = 0;
-	static char      **buffers = NULL;
 
 	int available = size - (aligned ? (int) ALIGN8(s_used) : s_used);
 
@@ -138,31 +169,6 @@ static void dumpall(void)
 }
 #endif
 
-
-struct Test* parse_test_definitions(FILE *file)
-{
-	char keyword[30];
-
-	while (read_keyword(file, keyword, sizeof keyword)) {
-		if (!strcmp(keyword, "test")) {
-			ct_test(file);
-		} else {
-			printf("Unkown keyword on line %zu: '%s'\n", line, keyword);
-			exit(1);
-		}
-	}
-
-	#ifdef NEVER
-	dumpall();
-	#endif
-
-	return testlist;
-}
-
-void free_testlist(struct Test *list)
-{
-	free(list);
-}
 
 static void add_argument(const char *argname, const char *argvalue)
 {

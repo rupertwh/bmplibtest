@@ -37,4 +37,4 @@ struct Test {
 };
 
 struct Test* parse_test_definitions(FILE *file);
-void free_testlist(struct Test *list);
+void free_testlist(void);
