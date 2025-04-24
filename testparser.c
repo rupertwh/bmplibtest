@@ -321,7 +321,7 @@ static void test_commandlist(FILE *file)
 			continue;
 		}
 		if ('{' == c) {
-			fprintf(stderr, "%s(): invalid char '%c' in line %zu\n", __func__, c, line);
+			fprintf(stderr, "%s(): invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
 			exit(1);
 		}
 
@@ -329,7 +329,7 @@ static void test_commandlist(FILE *file)
 
 		len = read_keyword(file, command, sizeof command);
 		if (len == 0) {
-			fprintf(stderr, "%s(): Panic, empty command name around line %zu\n", __func__, line);
+			fprintf(stderr, "%s(): Panic, empty command name around line %zu, pos %zu\n", __func__, line, pos);
 			exit(1);
 		}
 		add_command(command, len);
@@ -361,6 +361,9 @@ static void test_command(FILE *file, const char *cmdname)
 			test_command_args(file, cmdname);
 			return;
 		}
+
+		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
+		exit(1);
 	}
 
 	if (EOF == 'c') {
@@ -451,7 +454,7 @@ static int read_text_(struct read_text_args *args)
 		}
 
 		if (strchr(args->invalid, c)) {
-			fprintf(stderr, "%s(): invalid character '%c' on line %zu\n", __func__, c, line);
+			fprintf(stderr, "%s(): invalid character '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
 			exit(1);
 		}
 
@@ -530,6 +533,8 @@ static int read_char(FILE *file)
 		line++;
 		prevpos = pos;
 		pos = 0;
+	} else {
+		pos++;
 	}
 
 	return c;
@@ -540,6 +545,8 @@ static void unread_char(FILE *file, int c)
 	if ('\n' == c) {
 		line--;
 		pos = prevpos;
+	} else {
+		pos--;
 	}
 
 	ungetc(c, file);
