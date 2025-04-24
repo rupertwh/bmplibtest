@@ -112,8 +112,8 @@ int main(int argc, char *argv[])
 	testlist = parse_test_definitions(file);
 	fclose(file);
 
-	for (struct Test *test = testlist ; test; test = test->next) {
-		bool             failed = false;
+	for (struct Test *test = testlist; test; test = test->next) {
+
 
 		testnum++;
 
@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
 		}
 
 
+		bool failed = false;
 		for (struct TestCommand *command = test->cmdlist; command; command = command->next) {
 
 			if (conf->verbose > 1) {
