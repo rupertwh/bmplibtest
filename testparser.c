@@ -57,9 +57,8 @@ static size_t line    = 1;
 static size_t pos     = 0;
 static size_t prevpos = 0;
 
-static struct Test          *testlist = NULL;
-static struct Test         **testlisthead = &testlist;
-static struct Test          *currtest = NULL;
+static struct Test          *testlisthead = NULL;
+static struct Test         **testlist = &testlisthead;
 static struct TestCommand  **currcmdlist = NULL;
 static struct TestArgument **currarglist = NULL;
 
@@ -88,7 +87,7 @@ struct Test* parse_test_definitions(FILE *file)
 	dumpall();
 	#endif
 
-	return testlist;
+	return testlisthead;
 }
 
 void free_testlist(void)
@@ -152,7 +151,7 @@ static void dumpall(void)
 	struct TestCommand  *cmd;
 	struct TestArgument *arg;
 
-	for (test = testlist; test; test = test->next) {
+	for (test = testlisthead; test; test = test->next) {
 		printf("Test: '%s'\n", test->descr);
 		for (cmd = test->cmdlist; cmd; cmd = cmd->next) {
 			printf(" +-'%s'\n", cmd->cmdname);
@@ -235,33 +234,32 @@ static void command_done(void)
 
 static void add_test(const char *descr, int len)
 {
-	if (currtest) {
+	if (currcmdlist) {
 		fprintf(stderr, "%s(): there's already an unfinalized test! (%s)\n", __func__, descr);
 		exit(1);
 	}
 
-	buffers_ensure_space(sizeof *currtest, true);
-	currtest = (struct Test*) (s_currbuffer + ALIGN8(s_used));
-	s_used = ALIGN8(s_used) + sizeof *currtest;
+	buffers_ensure_space(sizeof **testlist, true);
+	*testlist = (struct Test*) (s_currbuffer + ALIGN8(s_used));
+	s_used = ALIGN8(s_used) + sizeof **testlist;
 
 	buffers_ensure_space(len + 1, false);
-	currtest->descr = s_currbuffer + s_used;
-	strcpy(currtest->descr, descr);
+	(*testlist)->descr = s_currbuffer + s_used;
+	strcpy((*testlist)->descr, descr);
 	s_used += len + 1;
 
-	currcmdlist = &currtest->cmdlist;
+	currcmdlist = &(*testlist)->cmdlist;
+
+	testlist = &(*testlist)->next;
+
 }
 
 static void test_done(void)
 {
-	if (!currtest) {
+	if (!currcmdlist) {
 		fprintf(stderr, "%s(): there is no current test to finalize!\n", __func__);
 		exit(1);
 	}
-
-	*testlisthead = currtest;
-	testlisthead = &currtest->next;
-	currtest = NULL;
 	currcmdlist = NULL;
 }
 
