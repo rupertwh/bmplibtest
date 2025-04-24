@@ -20,36 +20,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <stdint.h>
-#include <limits.h>
 #include <stdbool.h>
 #include <assert.h>
 
 #include "testparser.h"
 
-const size_t testbuffer_size = 128 * 1024UL;
-
 
 #define ALIGN8(a) (((size_t)(a) + 7) & ~(size_t)7)
 
+static void buffers_ensure_space(int nbytes, bool aligned);
 static void ignore_comment(FILE *file);
-static size_t read_keyword(FILE *file, char *buffer, size_t size);
-
-static void ct_test(FILE *file);
+static int read_keyword(FILE *file, char *buffer, int size);
 
 struct read_text_args {
 	FILE       *file;
 	char       *buffer;
-	size_t      size;
+	int         size;
 	const char *endswith;
 	const char *invalid;
 	bool        may_eof;
 	bool        keep_ending_char;
 };
 #define read_text(...) read_text_(&(struct read_text_args){ __VA_ARGS__ })
-static size_t read_text_(struct read_text_args *args);
+static int read_text_(struct read_text_args *args);
 
+static void ct_test(FILE *file);
 static void test_commandlist(FILE *file);
 static void test_command(FILE *file, const char *cmdname);
 static void test_command_args(FILE *file, const char *cmdname);
@@ -62,21 +57,68 @@ static size_t line    = 1;
 static size_t pos     = 0;
 static size_t prevpos = 0;
 
-static char        *testbuf = NULL;
-static size_t       testbuf_used = 0;
-static struct Test *testlist = NULL;
-static struct Test **testlisthead = &testlist;
-static struct Test *currtest = NULL;
-static struct TestCommand **currcmdlist = NULL;
+static struct Test          *testlist = NULL;
+static struct Test         **testlisthead = &testlist;
+static struct Test          *currtest = NULL;
+static struct TestCommand  **currcmdlist = NULL;
 static struct TestArgument **currarglist = NULL;
+
+
+static char  *s_currbuffer = NULL;
+static int    s_used = 0;
+
+static void buffers_ensure_space(int nbytes, bool aligned)
+{
+	static const int   size    = 8 * 1024; /* size of a single buffer      */
+	static const int   nmax    = 1000;     /* max number of buffers        */
+	static const int   nincr   = 16;       /* number of buffers to grow by */
+	static int         nalloc  = 0;
+	static int         idx     = 0;
+	static char      **buffers = NULL;
+
+	int available = size - (aligned ? (int) ALIGN8(s_used) : s_used);
+
+	if (s_currbuffer && nbytes <= available)
+		return;
+
+	if (nbytes > size) {
+		printf("%s(): requested too large of a buffer: %d\n", __func__, nbytes);
+		exit(1);
+	}
+
+	if (idx >= nalloc) {
+		int newalloc = nalloc + nincr;
+
+		if (newalloc > nmax) {
+			printf("%s(): exceeded max. number of pool buffers (%d)\n", __func__, newalloc);
+			exit(1);
+		}
+
+		char **tmp = realloc(buffers, newalloc * sizeof *buffers);
+		if (!tmp) {
+			perror(__func__);
+			exit(1);
+		}
+		buffers = tmp;
+		nalloc  = newalloc;
+	}
+
+	if (!(s_currbuffer = malloc(size))) {
+		perror(__func__);
+		exit(1);
+	}
+	memset(s_currbuffer, 0, size);
+	s_used = 0;
+	buffers[idx++] = s_currbuffer;
+}
 
 
 
 #ifdef NEVER
 static void dumpall(void)
 {
-	struct Test *test;
-	struct TestCommand *cmd;
+	struct Test         *test;
+	struct TestCommand  *cmd;
 	struct TestArgument *arg;
 
 	for (test = testlist; test; test = test->next) {
@@ -101,13 +143,6 @@ struct Test* parse_test_definitions(FILE *file)
 {
 	char keyword[30];
 
-	if (!(testbuf = malloc(testbuffer_size))) {
-		perror("malloc test buffer");
-		exit(1);
-	}
-	memset(testbuf, 0, testbuffer_size);
-
-
 	while (read_keyword(file, keyword, sizeof keyword)) {
 		if (!strcmp(keyword, "test")) {
 			ct_test(file);
@@ -131,64 +166,49 @@ void free_testlist(struct Test *list)
 
 static void add_argument(const char *argname, const char *argvalue)
 {
-	size_t size;
-
 	assert(argname != NULL);
 	assert(argvalue != NULL);
-	size_t namelen = strlen(argname);
-	size_t vallen  = strlen(argvalue);
-
+	int namelen = (int) strlen(argname);
+	int vallen  = (int) strlen(argvalue);
 
 	if (!currarglist) {
 		fprintf(stderr, "%s(): there is no current argument list! (%s)\n", __func__, argname);
 		exit(1);
 	}
 
-	size = sizeof **currarglist + namelen + 1 + vallen + 1;
+	buffers_ensure_space(sizeof **currarglist, true);
+	*currarglist = (struct TestArgument*) (s_currbuffer + ALIGN8(s_used));
+	s_used = ALIGN8(s_used) + sizeof **currarglist;
 
-	if (size + ALIGN8(testbuf_used) > testbuffer_size) {
-		fprintf(stderr, "%s(): testbuffer too small. Is %zu, need > %zu\n", __func__, testbuffer_size, size + ALIGN8(testbuf_used));
-		exit(1);
-	}
-
-	*currarglist = (struct TestArgument*) (testbuf + ALIGN8(testbuf_used));
-	testbuf_used = ALIGN8(testbuf_used) + sizeof **currarglist;
-
-	(*currarglist)->argname = testbuf + testbuf_used;
+	buffers_ensure_space(namelen + 1, false);
+	(*currarglist)->argname = s_currbuffer + s_used;
 	strcpy((*currarglist)->argname, argname);
-	testbuf_used += namelen + 1;
+	s_used += namelen + 1;
 
-	(*currarglist)->argvalue = testbuf + testbuf_used;
+	buffers_ensure_space(vallen + 1, false);
+	(*currarglist)->argvalue = s_currbuffer + s_used;
 	strcpy((*currarglist)->argvalue, argvalue);
-	testbuf_used += vallen + 1;
+	s_used += vallen + 1;
 
 	currarglist = &(*currarglist)->next;
-
-
 }
 
 
-static void add_command(const char *cmdname, size_t len)
+static void add_command(const char *cmdname, int len)
 {
-	size_t size;
-
 	if (!currcmdlist) {
 		fprintf(stderr, "%s(): there is no current command list! (%s)\n", __func__, cmdname);
 		exit(1);
 	}
 
-	size = sizeof **currcmdlist + len + 1;
-	if (size + ALIGN8(testbuf_used) > testbuffer_size) {
-		fprintf(stderr, "%s(): testbuffer too small. Is %zu, need > %zu\n", __func__, testbuffer_size, size + ALIGN8(testbuf_used));
-		exit(1);
-	}
+	buffers_ensure_space(sizeof **currcmdlist, true);
+	*currcmdlist = (struct TestCommand*) (s_currbuffer + ALIGN8(s_used));
+	s_used = ALIGN8(s_used) + sizeof **currcmdlist;
 
-	*currcmdlist = (struct TestCommand*) (testbuf + ALIGN8(testbuf_used));
-	testbuf_used = ALIGN8(testbuf_used) + sizeof **currcmdlist;
-
-	(*currcmdlist)->cmdname = testbuf + testbuf_used;
+	buffers_ensure_space(len + 1, false);
+	(*currcmdlist)->cmdname = s_currbuffer + s_used;
 	strcpy((*currcmdlist)->cmdname, cmdname);
-	testbuf_used += len + 1;
+	s_used += len + 1;
 
 	currarglist = &(*currcmdlist)->arglist;
 	currcmdlist = &(*currcmdlist)->next;
@@ -207,26 +227,21 @@ static void command_done(void)
 }
 
 
-static void add_test(const char *descr, size_t len)
+static void add_test(const char *descr, int len)
 {
-	size_t size;
-
 	if (currtest) {
 		fprintf(stderr, "%s(): there's already an unfinalized test! (%s)\n", __func__, descr);
 		exit(1);
 	}
 
-	size = sizeof *currtest + len + 1;
-	if (size + ALIGN8(testbuf_used) > testbuffer_size) {
-		fprintf(stderr, "%s(): testbuffer too small. Is %zu, need > %zu\n", __func__, testbuffer_size, size + ALIGN8(testbuf_used));
-		exit(1);
-	}
-	currtest = (struct Test*) (testbuf + ALIGN8(testbuf_used));
-	testbuf_used = ALIGN8(testbuf_used) + sizeof *currtest;
+	buffers_ensure_space(sizeof *currtest, true);
+	currtest = (struct Test*) (s_currbuffer + ALIGN8(s_used));
+	s_used = ALIGN8(s_used) + sizeof *currtest;
 
-	currtest->descr = testbuf + testbuf_used;
+	buffers_ensure_space(len + 1, false);
+	currtest->descr = s_currbuffer + s_used;
 	strcpy(currtest->descr, descr);
-	testbuf_used += len + 1;
+	s_used += len + 1;
 
 	currcmdlist = &currtest->cmdlist;
 }
@@ -248,10 +263,10 @@ static void test_done(void)
 
 static void ct_test(FILE *file)
 {
-	int    c;
-	bool   has_descr = false;
-	size_t descr_len = 0;
-	char   descr[120] = { 0 };
+	int   c;
+	bool  has_descr = false;
+	int   descr_len = 0;
+	char  descr[120] = { 0 };
 
 
 	while (EOF != (c = read_char(file))) {
@@ -286,9 +301,9 @@ static void ct_test(FILE *file)
 
 static void test_commandlist(FILE *file)
 {
-	int    c;
-	char   command[80] = { 0 };
-	size_t len;
+	int  c;
+	char command[80] = { 0 };
+	int  len;
 
 	while (EOF != (c = read_char(file))) {
 		if ('}' == c) {
@@ -404,11 +419,11 @@ static void test_command_args(FILE *file, const char *cmdname)
 }
 
 
-static size_t read_text_(struct read_text_args *args)
+static int read_text_(struct read_text_args *args)
 {
-	int    c;
-	size_t len = 0, limbo_len = 0;
-	char   limbo_space[100] = { 0 };
+	int  c;
+	int  len = 0, limbo_len = 0;
+	char limbo_space[100] = { 0 };
 
 	assert(args->size > 0);
 
@@ -480,11 +495,10 @@ static size_t read_text_(struct read_text_args *args)
 }
 
 
-
-static size_t read_keyword(FILE *file, char *buffer, size_t size)
+static int read_keyword(FILE *file, char *buffer, int size)
 {
 	return read_text(.file = file, .buffer = buffer, .size = size,
-	                 .endswith = "({ \t\n", .invalid = "})\r",
+	                 .endswith = "({ \t\n", .invalid = "})",
 	                 .may_eof = false, .keep_ending_char = true);
 
 }
