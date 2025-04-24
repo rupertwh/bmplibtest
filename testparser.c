@@ -498,7 +498,7 @@ static int read_text_(struct read_text_args *args)
 static int read_keyword(FILE *file, char *buffer, int size)
 {
 	return read_text(.file = file, .buffer = buffer, .size = size,
-	                 .endswith = "({ \t\n", .invalid = "})",
+	                 .endswith = "({ \t\r\n,;:\"'`", .invalid = "})",
 	                 .may_eof = false, .keep_ending_char = true);
 
 }
