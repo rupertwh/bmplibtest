@@ -9,6 +9,16 @@ conf_data = configuration_data()
 conf_data.set('progname', meson.project_name())
 conf_data.set('prog_version', meson.project_version())
 
+if get_option('sanitize')
+  sanitize = [
+    '-fsanitize=signed-integer-overflow',
+    '-fsanitize=undefined',
+    '-fsanitize=float-divide-by-zero',
+  ]
+  add_project_arguments(sanitize, language : 'c')
+  add_project_link_arguments(sanitize, language: 'c')
+endif
+
 #jpegdep = dependency('libjpeg',required: false)
 pngdep = dependency('libpng')
 bmpdep = dependency('libbmp')
