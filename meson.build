@@ -49,4 +49,10 @@ executable('bmplibtest',
            'allocate.c',
            'conf.c',
            install: true,
-           dependencies: [bmpdep, pngdep, mathdep])
+           dependencies: [bmpdep, pngdep, mathdep]
+)
+
+executable('bmpinspect',
+           'bmpinspect.c',
+           install: true,
+)
