@@ -277,7 +277,7 @@ test (Save 64-bit RGB) {
 
 test (Save 32-bit RGB) {
     loadbmp {sample, g/rgb32.bmp, format: float}
-    savebmp {rgb32_16.bmp, format: int, bufferbits: 16}
+    savebmp {rgb32_16.bmp, format: int, bufferbits: 16, outbits: r10g10b10a0 }
 }
 
 test (Load 64-bit RGB) {
