@@ -46,6 +46,7 @@ executable('bmplibtest',
            'vartest.c',
            'imgstack.c',
            'testparser.c',
+           'allocate.c',
            'conf.c',
            install: true,
            dependencies: [bmpdep, pngdep, mathdep])

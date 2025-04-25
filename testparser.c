@@ -23,12 +23,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#include "allocate.h"
 #include "testparser.h"
 
 
-#define ALIGN8(a) (((size_t)(a) + 7) & ~(size_t)7)
-
-static void buffers_ensure_space(int nbytes, bool aligned);
 static void ignore_comment(FILE *file);
 static int read_keyword(FILE *file, char *buffer, int size);
 
@@ -63,12 +61,6 @@ static struct TestCommand  **currcmdlist = NULL;
 static struct TestArgument **currarglist = NULL;
 
 
-static char  *s_currbuffer = NULL;
-static int    s_used = 0;
-
-static int    idx     = 0;
-static char **buffers = NULL;
-
 
 struct Test* parse_test_definitions(FILE *file)
 {
@@ -92,54 +84,7 @@ struct Test* parse_test_definitions(FILE *file)
 
 void free_testlist(void)
 {
-	for (int i = 0; i < idx; i++)
-		free(buffers[i]);
-	free(buffers);
-}
-
-
-
-static void buffers_ensure_space(int nbytes, bool aligned)
-{
-	static const int   size    = 8 * 1024; /* size of a single buffer      */
-	static const int   nmax    = 1000;     /* max number of buffers        */
-	static const int   nincr   = 16;       /* number of buffers to grow by */
-	static int         nalloc  = 0;
-
-	int available = size - (aligned ? (int) ALIGN8(s_used) : s_used);
-
-	if (s_currbuffer && nbytes <= available)
-		return;
-
-	if (nbytes > size) {
-		printf("%s(): requested too large of a buffer: %d\n", __func__, nbytes);
-		exit(1);
-	}
-
-	if (idx >= nalloc) {
-		int newalloc = nalloc + nincr;
-
-		if (newalloc > nmax) {
-			printf("%s(): exceeded max. number of pool buffers (%d)\n", __func__, newalloc);
-			exit(1);
-		}
-
-		char **tmp = realloc(buffers, newalloc * sizeof *buffers);
-		if (!tmp) {
-			perror(__func__);
-			exit(1);
-		}
-		buffers = tmp;
-		nalloc  = newalloc;
-	}
-
-	if (!(s_currbuffer = malloc(size))) {
-		perror(__func__);
-		exit(1);
-	}
-	memset(s_currbuffer, 0, size);
-	s_used = 0;
-	buffers[idx++] = s_currbuffer;
+	free_all();
 }
 
 
@@ -164,7 +109,6 @@ static void dumpall(void)
 		}
 	}
 
-	printf("Memory used: %zu of %zu\n", testbuf_used, testbuffer_size);
 }
 #endif
 
@@ -181,19 +125,13 @@ static void add_argument(const char *argname, const char *argvalue)
 		exit(1);
 	}
 
-	buffers_ensure_space(sizeof **currarglist, true);
-	*currarglist = (struct TestArgument*) (s_currbuffer + ALIGN8(s_used));
-	s_used = ALIGN8(s_used) + sizeof **currarglist;
+	*currarglist = allocate(sizeof **currarglist, true);
 
-	buffers_ensure_space(namelen + 1, false);
-	(*currarglist)->argname = s_currbuffer + s_used;
+	(*currarglist)->argname = allocate(namelen + 1, false);
 	strcpy((*currarglist)->argname, argname);
-	s_used += namelen + 1;
 
-	buffers_ensure_space(vallen + 1, false);
-	(*currarglist)->argvalue = s_currbuffer + s_used;
+	(*currarglist)->argvalue = allocate(vallen + 1, false);
 	strcpy((*currarglist)->argvalue, argvalue);
-	s_used += vallen + 1;
 
 	currarglist = &(*currarglist)->next;
 }
@@ -206,14 +144,10 @@ static void add_command(const char *cmdname, int len)
 		exit(1);
 	}
 
-	buffers_ensure_space(sizeof **currcmdlist, true);
-	*currcmdlist = (struct TestCommand*) (s_currbuffer + ALIGN8(s_used));
-	s_used = ALIGN8(s_used) + sizeof **currcmdlist;
+	*currcmdlist = allocate(sizeof **currcmdlist, true);
 
-	buffers_ensure_space(len + 1, false);
-	(*currcmdlist)->cmdname = s_currbuffer + s_used;
+	(*currcmdlist)->cmdname = allocate(len + 1, false);
 	strcpy((*currcmdlist)->cmdname, cmdname);
-	s_used += len + 1;
 
 	currarglist = &(*currcmdlist)->arglist;
 	currcmdlist = &(*currcmdlist)->next;
@@ -239,19 +173,13 @@ static void add_test(const char *descr, int len)
 		exit(1);
 	}
 
-	buffers_ensure_space(sizeof **testlist, true);
-	*testlist = (struct Test*) (s_currbuffer + ALIGN8(s_used));
-	s_used = ALIGN8(s_used) + sizeof **testlist;
+	*testlist = allocate(sizeof **testlist, true);
 
-	buffers_ensure_space(len + 1, false);
-	(*testlist)->descr = s_currbuffer + s_used;
+	(*testlist)->descr = allocate(len + 1, false);
 	strcpy((*testlist)->descr, descr);
-	s_used += len + 1;
 
 	currcmdlist = &(*testlist)->cmdlist;
-
 	testlist = &(*testlist)->next;
-
 }
 
 static void test_done(void)
