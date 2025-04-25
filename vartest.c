@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	testlist = parse_test_definitions(file);
+	testlist = parse_test_definitions(file, conf->dump, conf->pretty);
 	fclose(file);
 
 	for (struct Test *test = testlist; test; test = test->next) {

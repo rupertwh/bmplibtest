@@ -50,6 +50,8 @@ static void test_command_args(FILE *file, const char *cmdname);
 static int read_char(FILE *file);
 static void unread_char(FILE *file, int c);
 
+static void prettyprint(void);
+static void dumpall(void);
 
 static size_t line    = 1;
 static size_t pos     = 0;
@@ -62,7 +64,7 @@ static struct TestArgument **currarglist = NULL;
 
 
 
-struct Test* parse_test_definitions(FILE *file)
+struct Test* parse_test_definitions(FILE *file, bool dump, bool pretty)
 {
 	char keyword[30];
 
@@ -75,9 +77,10 @@ struct Test* parse_test_definitions(FILE *file)
 		}
 	}
 
-	#ifdef NEVER
-	dumpall();
-	#endif
+	if (dump)
+		dumpall();
+	if (pretty)
+		prettyprint();
 
 	return testlisthead;
 }
@@ -89,15 +92,15 @@ void free_testlist(void)
 
 
 
-#ifdef NEVER
 static void dumpall(void)
 {
 	struct Test         *test;
 	struct TestCommand  *cmd;
 	struct TestArgument *arg;
+	int                  count = 0;
 
 	for (test = testlisthead; test; test = test->next) {
-		printf("Test: '%s'\n", test->descr);
+		printf("Test %02d: '%s'\n", ++count, test->descr);
 		for (cmd = test->cmdlist; cmd; cmd = cmd->next) {
 			printf(" +-'%s'\n", cmd->cmdname);
 			for (arg = cmd->arglist; arg; arg = arg->next) {
@@ -110,7 +113,38 @@ static void dumpall(void)
 	}
 
 }
-#endif
+
+static void prettyprint(void)
+{
+	struct Test         *test;
+	struct TestCommand  *cmd;
+	struct TestArgument *arg;
+	int                  count = 0;
+
+	puts("\n# Test definitions:\n");
+	for (test = testlisthead; test; test = test->next) {
+		printf("# Test %02d:\n", ++count);
+		printf("test (%s) {\n", test->descr);
+		for (cmd = test->cmdlist; cmd; cmd = cmd->next) {
+			printf("\t%-13s { ", cmd->cmdname);
+			for (arg = cmd->arglist; arg; arg = arg->next) {
+				if (arg != cmd->arglist)
+					printf(", ");
+				if (arg->argvalue && *arg->argvalue)
+					printf("%s: %s", arg->argname, arg->argvalue);
+				else
+					printf("%s", arg->argname);
+			}
+			if (cmd->arglist)
+				puts(" }");
+			else
+				puts("}");
+		}
+		puts("}\n");
+	}
+	puts("\n");
+}
+
 
 
 static void add_argument(const char *argname, const char *argvalue)

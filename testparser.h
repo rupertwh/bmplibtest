@@ -36,5 +36,5 @@ struct Test {
 	struct  TestCommand *cmdlist;
 };
 
-struct Test* parse_test_definitions(FILE *file);
+struct Test* parse_test_definitions(FILE *file, bool dump, bool prettyprint);
 void free_testlist(void);

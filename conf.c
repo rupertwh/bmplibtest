@@ -38,6 +38,8 @@ enum Optnum {
 	OP_SAMPLEDIR,
 	OP_REFDIR,
 	OP_TMPDIR,
+	OP_DUMP,
+	OP_PRETTY,
 	OP_HELP,
 };
 
@@ -55,6 +57,8 @@ struct Option {
 	{ OP_SAMPLEDIR, 's', "samples", true , "./samples",      "BMPLIBTEST_SAMPLEDIR" },
 	{ OP_REFDIR,    'r', "refs",    true , "./refs",         "BMPLIBTEST_REFDIR" },
 	{ OP_TMPDIR,    't', "tmp",     true , "./tmp",          "BMPLIBTEST_TMPDIR" },
+	{ OP_DUMP,      'd', "dump",    false, NULL,             NULL },
+	{ OP_PRETTY,    'p', "pretty",  false, NULL,             NULL },
 	{ OP_HELP,      '?', "help",    false, NULL,             NULL },
 };
 
@@ -87,6 +91,14 @@ static bool do_opt(int op, struct Conf *cmdline)
 
 		case OP_HELP:
 			cmdline->help = true;
+			break;
+
+		case OP_DUMP:
+			cmdline->dump = true;
+			break;
+
+		case OP_PRETTY:
+			cmdline->pretty = true;
 			break;
 
 		default:
@@ -231,6 +243,7 @@ void conf_usage(void)
 	printf("\nUsage:\n");
 	printf("\t%s [options] [testnums...]\n", PROGRAM_NAME);
 	printf("\n\tIf no test numbers are given, all available tests will be run.\n");
+	printf("\t(Try -v, -d, or -p in order to find the test numbers.)\n");
 	printf("\nOptions:\n");
 
 	print_option_with_arg(OP_TESTFILE, "file");
@@ -249,6 +262,12 @@ void conf_usage(void)
 	print_option(OP_QUIET);
 	printf("\t\tBe more or less verbose. Repeat option to be even more verbose\n"
                "\t\tor quiet.\n\n");
+
+	print_option(OP_DUMP);
+	printf("\t\tPrint a dump of the parsed test list.\n\n");
+
+	print_option(OP_PRETTY);
+	printf("\t\tPretty-print the parsed test list in def file format.\n\n");
 
 	print_option(OP_HELP);
 	printf("\t\tPrint this help screen.\n\n");

@@ -31,6 +31,8 @@ struct Conf {
 	char           *testfile;
 	bool            env;
 	bool            help;
+	bool            dump;
+	bool            pretty;
 	int             nstrings;
 	struct Confstr *strlist;
 };
