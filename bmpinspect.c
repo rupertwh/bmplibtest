@@ -184,7 +184,7 @@ const char* info_header_name(const struct Bmpinfo *ih);
 bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 bool read_file_header(FILE *file, struct Bmpfile *fh);
 bool read_info_header(FILE *file, const struct Bmpfile *fh, struct Bmpinfo *ih);
-uint64_t measure_file_size(FILE *file);
+long long measure_file_size(FILE *file);
 
 
 int main(int argc, char **argv)
@@ -231,10 +231,10 @@ int main(int argc, char **argv)
 		max_colors = 0;
 	}
 
-	uint64_t filesize = measure_file_size(file);
-	uint64_t maximgsize = filesize - fh.offbits;
+	long long filesize = measure_file_size(file);
+	long long maximgsize = filesize - fh.offbits;
 	if (ih.cstype == PROFILE_EMBEDDED)
-		maximgsize -= filesize - (14ULL + ih.profiledata);
+		maximgsize -= filesize - (14LL + ih.profiledata);
 
 	bool badimgsize = maximgsize < ih.sizeimage;
 	bool badbitcount = ih.bitcount < 1 || (ih.bitcount > 32 && ih.bitcount != 64);
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 		printf("\nfh.size == file header + info header (ok for OS/2)\n");
 	}
 	else if (filesize > 0 && filesize != fh.size) {
-		printf("\nActual file size: 0x%08llx (%llu)!\n", (unsigned long long) filesize, (unsigned long long) filesize);
+		printf("\nActual file size: 0x%08llx (%lld)!\n", (unsigned long long) filesize, filesize);
 	}
 
 	if (ncolors > max_colors) {
@@ -313,7 +313,7 @@ abort:
 }
 
 
-uint64_t measure_file_size(FILE *file)
+long long measure_file_size(FILE *file)
 {
 	long pos, size;
 
@@ -332,7 +332,7 @@ uint64_t measure_file_size(FILE *file)
 
 	fseek(file, pos, SEEK_SET);
 
-	return (uint64_t) size;
+	return (long long) size;
 }
 
 
