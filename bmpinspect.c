@@ -56,6 +56,10 @@ struct Bmpfile {
 	unsigned      reserved1;
 	unsigned      reserved2;
 	unsigned long offbits;
+
+	/* OS/2 */
+	int           xhotspot;
+	int           yhotspot;
 };
 
 struct Bmpinfo {
@@ -97,6 +101,7 @@ struct Bmpinfo {
 
 	/* OS22XBITMAPHEADER */
 	unsigned      units;           /* = 0 BRU_METRIC  */
+	unsigned      reserved_os2;
 	unsigned      orientation;     /* = 0 BRA_BOTTOMUP */
 	unsigned      halftone_alg; /* BRH_NOTHALFTONED, BRH_ERRORDIFFUSION=1, BRH_PANDA=2, BRA_SUPERCIRCLE=3 */
 	unsigned long halftone_parm1; /* for BRH_ERRORDIFFUSION: % error dampening; for PANDA/SUPERCIRCLE: x dimenstion of pattern in pixels */
@@ -239,11 +244,19 @@ int main(int argc, char **argv)
 	bool badimgsize = maximgsize < ih.sizeimage;
 	bool badbitcount = ih.bitcount < 1 || (ih.bitcount > 32 && ih.bitcount != 64);
 
+	bool os2 = ih.version == BMPINFO_OS21X || ih.version == BMPINFO_OS22X;
+
 	printf("\nFile header:\n");
 	print_field(&fh.type, U16, "type", false, NULL);
 	print_field(&fh.size, U32, "size", fh.size != filesize, NULL);
-	print_field(&fh.reserved1, U16, "reserved1", false, NULL);
-	print_field(&fh.reserved2, U16, "reserved2", false, NULL);
+	if (os2) {
+		print_field(&fh.reserved1, S16, "xhotspot", false, NULL);
+		print_field(&fh.reserved2, S16, "yhotspot", false, NULL);
+	} else {
+		print_field(&fh.reserved1, U16, "reserved1", false, NULL);
+		print_field(&fh.reserved2, U16, "reserved2", false, NULL);
+
+	}
 	print_field(&fh.offbits, U32, "offbits", false, NULL);
 
 	fclose(file);
@@ -280,6 +293,7 @@ int main(int argc, char **argv)
 	}
 	if (ih.version == BMPINFO_OS22X) {
 		print_field(&ih.units, U16, "units", false, os2_units_name(&ih));
+		print_field(&ih.reserved_os2, U16, "reserved", false, NULL);
 		print_field(&ih.orientation, U16, "orientation", false, os2_orientation_name(&ih));
 		print_field(&ih.halftone_alg, U16, "halftone alg.", false, os2_halftonealg_name(&ih));
 		print_field(&ih.halftone_parm1, U32, "halftone parm1", false, NULL);
@@ -511,6 +525,9 @@ bool read_file_header(FILE *file, struct Bmpfile *fh)
 	fh->reserved2 = u16_from_le(buffer +  8);
 	fh->offbits   = u32_from_le(buffer + 10);
 
+	fh->xhotspot = s16_from_le(buffer + 6);
+	fh->yhotspot = s16_from_le(buffer + 8);
+
 	return true;
 }
 
@@ -590,6 +607,7 @@ bool read_info_header(FILE *file, const struct Bmpfile *fh, struct Bmpinfo *ih)
 	}
 	else if (ih->version == BMPINFO_OS22X) {
 		ih->units          = u16_from_le(buffer + 40);
+		ih->reserved_os2   = u16_from_le(buffer + 42);
 		ih->orientation    = u16_from_le(buffer + 44);
 		ih->halftone_alg   = u16_from_le(buffer + 46);
 		ih->halftone_parm1 = u32_from_le(buffer + 48);
