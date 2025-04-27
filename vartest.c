@@ -1726,10 +1726,10 @@ abort:
 
 static struct Image* pngfile_read(FILE *file)
 {
-	struct Image  *img = NULL;
+	struct Image * volatile img = NULL;
+	png_bytep    * volatile row_pointers = NULL;
 	png_structp    png_ptr = NULL;
 	png_infop      info_ptr = NULL;
-	png_bytep     *row_pointers = NULL;
 	png_uint_32    width, height;
 	int            bit_depth, color_type, interlace_method, compression_method, filter_method;
 	int            y;
@@ -1744,6 +1744,12 @@ static struct Image* pngfile_read(FILE *file)
 		goto abort;
 	}
 
+	if (!(img = malloc(sizeof *img))) {
+		perror("allocate png image");
+		goto abort;
+	}
+	memset(img, 0, sizeof *img);
+
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		printf("PNG reading failed\n");
 		goto abort;
@@ -1755,13 +1761,6 @@ static struct Image* pngfile_read(FILE *file)
 
 	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_method,
 	             &compression_method, &filter_method);
-
-
-	if (!(img = malloc(sizeof *img))) {
-		perror("allocate png image");
-		goto abort;
-	}
-	memset(img, 0, sizeof *img);
 
 	if (bit_depth < 8) {
 		if (color_type == PNG_COLOR_TYPE_PALETTE ||
