@@ -36,8 +36,9 @@ struct read_text_args {
 	int         size;
 	const char *endswith;
 	const char *invalid;
-	bool        may_eof;
+	const char *ignore;
 	bool        keep_ending_char;
+	bool        allow_comments_within;
 };
 #define read_text(...) read_text_(&(struct read_text_args){ __VA_ARGS__ })
 static int read_text_(struct read_text_args *args);
@@ -66,7 +67,7 @@ static struct TestArgument **currarglist = NULL;
 
 struct Test* parse_test_definitions(FILE *file, bool dump, bool pretty)
 {
-	char keyword[30];
+	char keyword[32] = { 0 };
 
 	while (read_keyword(file, keyword, sizeof keyword)) {
 		if (!strcmp(keyword, "test")) {
@@ -230,28 +231,56 @@ static void test_done(void)
 static void ct_test(FILE *file)
 {
 	int   c;
-	bool  has_descr = false;
 	int   descr_len = 0;
-	char  descr[120] = { 0 };
+	char  descr[112] = { 0 };
+	bool  has_descr = false, has_cmdlist = false;
 
+	/* Keyword 'test' has been read, we now expect an optional description in parentheses,
+	 * an opening brace '{' followed by a command list (which may be empty), and after the
+	 * command list a closing brace '}'.
+	 * We ignore white space and comments.
+	 */
 
 	while (EOF != (c = read_char(file))) {
-		if ('(' == c && !has_descr) {
-			descr_len = read_text(.file = file, .buffer = descr, .size = sizeof descr,
-			                      .endswith = ")", .invalid = "{}(\r\n",
-			                      .may_eof = false, .keep_ending_char = false);
-			has_descr = true;
-			continue;
+		if ('}' == c) {
+			if (!has_cmdlist) {
+				fprintf(stderr, "%s(): unexpected closing brace on line %zu, pos %zu\n", __func__, line, pos);
+				exit(1);
+			}
+			break;
 		}
+
+		if (strchr(" \t\r\n", c))
+			continue;
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
 		}
+
+		if ('(' == c) {
+			if (has_descr) {
+				fprintf(stderr, "%s(): test already has description '%s' (line %zu, pos %zu)\n", __func__, descr, line, pos);
+				exit(1);
+			}
+			descr_len = read_text(.file = file, .buffer = descr, .size = sizeof descr,
+			                      .endswith = ")", .invalid = "{}(", .ignore = "\r\n",
+			                      .keep_ending_char = false, .allow_comments_within = true);
+			has_descr = true;
+			continue;
+		}
+
 		if ('{' == c) {
+			if (has_cmdlist) {
+				fprintf(stderr, "%s(): cannot have nested tests, line %zu, pos %zu\n", __func__, line, pos);
+				exit(1);
+			}
 			add_test(descr, descr_len);
 			test_commandlist(file);
-			break;
+			has_cmdlist = true;
+			continue;
 		}
+		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
+		exit(1);
 	}
 	if (EOF == c) {
 		if (feof(file))
@@ -268,21 +297,24 @@ static void ct_test(FILE *file)
 static void test_commandlist(FILE *file)
 {
 	int  c;
-	char command[80] = { 0 };
+	char command[48] = { 0 };
 	int  len;
 
 	while (EOF != (c = read_char(file))) {
 		if ('}' == c) {
+			unread_char(file, c);
 			return;
+		}
+
+		if (strchr(" \t\r\n", c)) {
+			continue;
 		}
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
 		}
-		if (strchr(" \t\r\n", c)) {
-			continue;
-		}
-		if ('{' == c) {
+
+		if (strchr("{(,:;", c)) {
 			fprintf(stderr, "%s(): invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
 			exit(1);
 		}
@@ -373,13 +405,13 @@ static void test_command_args(FILE *file, const char *cmdname)
 			}
 			unread_char(file, c);
 			if (read_text(.file = file, .buffer = arg, .size = sizeof arg,
-			              .endswith = ":,} \t\n", .invalid = "{(", .may_eof = false, .keep_ending_char = true)) {
+			              .endswith = ":,} \t\n", .invalid = "{(", .keep_ending_char = true)) {
 				have_arg = true;
 			}
 		} else {
 			if (':' == c) {
 				read_text(.file = file, .buffer = val, .size = sizeof val,
-				          .endswith = ",} \t\n", .invalid = "{(:", .may_eof = false, .keep_ending_char = true);
+				          .endswith = ",} \t\n", .invalid = "{(:", .keep_ending_char = true);
 			}
 		}
 
@@ -404,6 +436,9 @@ static int read_text_(struct read_text_args *args)
 			continue;
 		}
 
+		if (args->ignore && strchr(args->ignore, c))
+			continue;
+
 		if (strchr(args->endswith, c)) {
 			if (args->keep_ending_char)
 				unread_char(args->file, c);
@@ -411,11 +446,15 @@ static int read_text_(struct read_text_args *args)
 		}
 
 		if ('#' == c) {
+			if (args->allow_comments_within) {
+				ignore_comment(args->file);
+				continue;
+			}
 			unread_char(args->file, c);
 			break;
 		}
 
-		if (strchr(args->invalid, c)) {
+		if (args->invalid && strchr(args->invalid, c)) {
 			fprintf(stderr, "%s(): invalid character '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
 			exit(1);
 		}
@@ -454,10 +493,7 @@ static int read_text_(struct read_text_args *args)
 			perror("read_text");
 			exit(1);
 		}
-		if (!args->may_eof) {
-			fprintf(stderr, "%s(): EOF while reading text: '%s'\n", __func__, args->buffer);
-			exit(1);
-		}
+		fprintf(stderr, "%s(): EOF while reading text: '%s'\n", __func__, args->buffer);
 	}
 
 	return len;
@@ -466,10 +502,15 @@ static int read_text_(struct read_text_args *args)
 
 static int read_keyword(FILE *file, char *buffer, int size)
 {
-	return read_text(.file = file, .buffer = buffer, .size = size,
+	int len =  read_text(.file = file, .buffer = buffer, .size = size,
 	                 .endswith = "({ \t\r\n,;:\"'`", .invalid = "})",
-	                 .may_eof = false, .keep_ending_char = true);
+	                 .keep_ending_char = true, .allow_comments_within = false);
 
+	if (len == 0 && !feof(file)) {
+		fprintf(stderr, "%s(): Invalid keyword on line %zu, pos %zu\n", __func__, line, pos + 1);
+		exit(1);
+	}
+	return len;
 }
 
 
