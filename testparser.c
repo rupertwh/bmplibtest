@@ -48,7 +48,7 @@ static int read_text_(struct read_text_args *args);
 static void ct_test(FILE *file);
 static void test_commandlist(FILE *file);
 static void test_command(FILE *file, const char *cmdname);
-static void test_command_args(FILE *file, const char *cmdname);
+static void test_command_args(FILE *file);
 
 static int read_char(FILE *file);
 static void unread_char(FILE *file, int c);
@@ -369,7 +369,7 @@ static void test_command(FILE *file, const char *cmdname)
 
 
 		if ('{' == c) {
-			test_command_args(file, cmdname);
+			test_command_args(file);
 			return;
 		}
 
@@ -388,7 +388,7 @@ static void test_command(FILE *file, const char *cmdname)
 }
 
 
-static void test_command_args(FILE *file, const char *cmdname)
+static void test_command_args(FILE *file)
 {
 	int    c;
 	char   arg[48] = { 0 }, val[48] = { 0 };
@@ -524,7 +524,7 @@ static int read_text_(struct read_text_args *args)
 
 static int read_keyword(FILE *file, char *buffer, int size)
 {
-	const static char valid[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+	static const char valid[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
 	int len =  read_text(.file = file, .buffer = buffer, .size = size,
 	                 .endswith = "({,;:\"'`#" WHITESPACE, .minlen = 1, .valid = valid,

@@ -230,14 +230,14 @@ int main(int argc, char **argv)
 	if (ih.cstype == PROFILE_EMBEDDED)
 		maximgsize -= filesize - (14LL + ih.profiledata);
 
-	bool badimgsize = maximgsize < ih.sizeimage;
+	bool badimgsize = maximgsize < (long long) ih.sizeimage;
 	bool badbitcount = ih.bitcount < 1 || (ih.bitcount > 32 && ih.bitcount != 64);
 
 	bool os2 = ih.version == BMPINFO_OS21X || ih.version == BMPINFO_OS22X;
 
 	printf("\nFile header:\n");
 	print_field(&fh.type, U16, "type", false, NULL);
-	print_field(&fh.size, U32, "size", fh.size != filesize, NULL);
+	print_field(&fh.size, U32, "size", (long long)fh.size != filesize, NULL);
 	if (os2) {
 		print_field(&fh.reserved1, S16, "xhotspot", false, NULL);
 		print_field(&fh.reserved2, S16, "yhotspot", false, NULL);
@@ -296,7 +296,7 @@ int main(int argc, char **argv)
 	if (fh.size == 14 + ih.size) {
 		printf("\nfh.size == file header + info header (ok for OS/2)\n");
 	}
-	else if (filesize > 0 && filesize != fh.size) {
+	else if (filesize > 0 && filesize != (long long) fh.size) {
 		printf("\nActual file size: 0x%08llx (%lld)!\n", (unsigned long long) filesize, filesize);
 	}
 

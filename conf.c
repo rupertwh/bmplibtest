@@ -63,7 +63,7 @@ struct Option {
 };
 
 static MAY_BE_UNUSED void add_opt_str(char **result, const char *arg);
-static const int shortname(enum Optnum op);
+static int shortname(enum Optnum op);
 static const char* longname(enum Optnum op);
 static const char* envname(enum Optnum op);
 static void print_option(enum Optnum op);
@@ -166,7 +166,7 @@ static void load_env_strings(struct Conf *cmdline)
 {
 	char *str;
 
-	for (int i = 0; i < ARRAY_SIZE(s_options); i++) {
+	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++) {
 		if (!s_options[i].envname)
 			continue;
 		if (!(str = getenv(s_options[i].envname)))
@@ -200,7 +200,7 @@ static void load_env_strings(struct Conf *cmdline)
 static void load_default_strings(struct Conf *cmdline)
 {
 
-	for (int i = 0; i < ARRAY_SIZE(s_options); i++) {
+	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++) {
 		if (!s_options[i].defaultstr)
 			continue;
 
@@ -285,7 +285,7 @@ void conf_usage(void)
 
 
 static bool next_arg(const char **parg);
-static bool add_to_str_list(struct Conf *cmdline, const char *arg);
+static bool add_to_str_list(const char *arg);
 static bool strict_strcmp(const char *s1, const char *s2, size_t len);
 static int capped_strlen(const char *str);
 
@@ -376,7 +376,8 @@ struct Conf* conf_parse_cmdline(int argc, char **argv)
 	int               i, op;
 	bool              rest_is_args = false;
 	static const int  opnum = ARRAY_SIZE(s_options);
-	size_t            comparelen;
+	int               comparelen;
+	size_t            eqlen = 0;
 	struct Conf      *cmdline;
 
 	s_current_arg = 0;
@@ -412,7 +413,16 @@ struct Conf* conf_parse_cmdline(int argc, char **argv)
 					continue;
 				}
 				equalsign  = strchr(arg, '=');
-				comparelen = equalsign ? equalsign - arg : capped_strlen(arg);
+				if (equalsign) {
+					eqlen = equalsign - arg;
+					if (eqlen > (size_t)INT_MAX / 2) {
+						fprintf(stderr, "option name way too long\n");
+						goto abort;
+					}
+					comparelen = (int) eqlen;
+				} else {
+					comparelen = capped_strlen(arg);
+				}
 
 				for (i = 0, op = opnum; i < opnum; i++) {
 					if (s_options[i].longname && strict_strcmp(arg, s_options[i].longname,
@@ -483,7 +493,7 @@ struct Conf* conf_parse_cmdline(int argc, char **argv)
 			}
 
 		} else {  /* non-option argument */
-			if (!add_to_str_list(cmdline, arg))
+			if (!add_to_str_list(arg))
 				goto abort;
 		}
 	}
@@ -524,7 +534,7 @@ void conf_free(struct Conf *cmdline)
  * 	add_to_str_list
  *******************************************************/
 
-static bool add_to_str_list(struct Conf *cmdline, const char *arg)
+static bool add_to_str_list(const char *arg)
 {
 	int             sz;
 	struct Confstr *str;
@@ -590,7 +600,7 @@ static bool strict_strcmp(const char *s1, const char *s2, size_t len)
 
 static const char* envname(enum Optnum op)
 {
-	for (int i = 0; i < ARRAY_SIZE(s_options); i++) {
+	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++) {
 		if (op == s_options[i].op)
 			return s_options[i].envname;
 	}
@@ -604,7 +614,7 @@ static const char* envname(enum Optnum op)
 
 static int shortname(enum Optnum op)
 {
-	for (int i = 0; i < ARRAY_SIZE(s_options); i++) {
+	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++) {
 		if (op == s_options[i].op)
 			return s_options[i].shortname;
 	}
@@ -618,7 +628,7 @@ static int shortname(enum Optnum op)
 
 static const char* longname(enum Optnum op)
 {
-	for (int i = 0; i < ARRAY_SIZE(s_options); i++) {
+	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++) {
 		if (op == s_options[i].op)
 			return s_options[i].longname;
 	}

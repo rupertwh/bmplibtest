@@ -49,10 +49,10 @@ static bool perform_compare(struct TestArgument *args);
 static bool perform_rawcompare(struct TestArgument *args);
 static bool perform_delete(void);
 static bool perform_convertgamma(struct TestArgument *args);
-static bool perform_flatten(struct TestArgument *args);
+static bool perform_flatten(void);
 static bool perform_exposure(struct TestArgument *args);
 static bool perform_convertformat(struct TestArgument *args);
-static bool perform_invertpalette(struct TestArgument *args);
+static bool perform_invertpalette(void);
 static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops);
 static struct Image* pngfile_read(FILE *file);
@@ -229,9 +229,9 @@ static bool perform(struct TestCommand *cmd)
 	else if (!strcmp("convertformat", cmd->cmdname))
 		return perform_convertformat(cmd->arglist);
 	else if (!strcmp("invertpalette", cmd->cmdname))
-		return perform_invertpalette(cmd->arglist);
+		return perform_invertpalette();
 	else if (!strcmp("flatten", cmd->cmdname))
-		return perform_flatten(cmd->arglist);
+		return perform_flatten();
 	else if (!strcmp("exposure", cmd->cmdname))
 		return perform_exposure(cmd->arglist);
 	else
@@ -290,7 +290,7 @@ static bool perform_loadraw(struct TestArgument *args)
 		printf("loadraw: Invalid dir '%s'\n", dir);
 		return false;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("loadraw: path too small!");
 		exit(1);
 	}
@@ -351,7 +351,7 @@ static bool perform_loadbmp(struct TestArgument *args)
 		printf("loadbmp: Invalid dir '%s'\n", dir);
 		goto abort;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("loadbmp: path too small!");
 		exit(1);
 	}
@@ -626,7 +626,7 @@ static bool perform_savebmp(struct TestArgument *args)
 
 	dirpath = conf->tmpdir;
 
-	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
 	}
@@ -964,7 +964,7 @@ static bool perform_rawcompare(struct TestArgument *args)
 		perror("rawcompare: seeking to offset");
 		return false;
 	}
-	if (size != fread(bytes, 1, size, rawfile)) {
+	if ((size_t)size != fread(bytes, 1, size, rawfile)) {
 		if (feof(rawfile))
 			printf("rawcompare: EOF while reading bytes\n");
 		else
@@ -1134,7 +1134,7 @@ static bool perform_addalpha(void)
 }
 
 
-static bool perform_flatten(struct TestArgument *args)
+static bool perform_flatten(void)
 {
 	struct Image  *img;
 	size_t         new_size, offnew, offold;
@@ -1282,7 +1282,7 @@ static void convert_gamma(double (*func)(double))
 {
 	struct Image *img;
 	int channels, colorchannels;
-	size_t        i, px, npixels;
+	size_t        px, npixels;
 
 	if (!(img = imgstack_get(0)))
 		exit(1);
@@ -1298,7 +1298,7 @@ static void convert_gamma(double (*func)(double))
 
 	for (px = 0; px < npixels; px++) {
 		size_t offs = px * channels;
-		for (i = 0; i < colorchannels; i++) {
+		for (int i = 0; i < colorchannels; i++) {
 			double   d = 0;
 
 			switch(img->format) {
@@ -1479,9 +1479,9 @@ static void convert_format(BMPFORMAT format, int bits)
 		img->buffersize = newsize;
 	}
 
-	for (int i = 0; i < nvals; i++) {
+	for (size_t i = 0; i < nvals; i++) {
 		double   d = 0;
-		int      offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
+		size_t   offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
 
 		switch (img->format) {
 		case BMP_FORMAT_FLOAT:
@@ -1540,7 +1540,7 @@ static void convert_format(BMPFORMAT format, int bits)
 	img->format = format;
 }
 
-static bool perform_invertpalette(struct TestArgument *args)
+static bool perform_invertpalette(void)
 {
 	struct Image *img;
 
@@ -1561,7 +1561,7 @@ static bool perform_invertpalette(struct TestArgument *args)
 		}
 	}
 
-	for (size_t i = 0; i < img->width * img->height; i++) {
+	for (size_t i = 0; i < (size_t)img->width * img->height; i++) {
 		img->buffer[i] = img->numcolors - img->buffer[i] - 1;
 	}
 
@@ -1642,7 +1642,7 @@ static bool perform_compare(struct TestArgument *args)
 			break;
 
 		case 32:
-			if (fuzz < abs(((uint32_t*)img[0]->buffer)[off] - ((uint32_t*)img[1]->buffer)[off])) {
+			if (fuzz < llabs((long long)(((uint32_t*)img[0]->buffer)[off]) - (long long)(((uint32_t*)img[1]->buffer)[off]))) {
 				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
 				        (unsigned) ((uint32_t*)img[0]->buffer)[off],
 				        (unsigned) ((uint32_t*)img[1]->buffer)[off],
@@ -1692,7 +1692,7 @@ static bool perform_loadpng(struct TestArgument *args)
 		printf("loadpng: Invalid dir '%s'", dir);
 		goto abort;
 	}
-	if (sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
 		printf("path too small!");
 		exit(1);
 	}
@@ -1833,7 +1833,7 @@ static struct Image* pngfile_read(FILE *file)
 	}
 	memset(img->buffer, 0, img->buffersize);
 
-	for (y = 0; y < height; y++) {
+	for (y = 0; y < (int)height; y++) {
 		row_pointers[y] = img->buffer + y * width * img->channels * (bit_depth / 8);
 	}
 
