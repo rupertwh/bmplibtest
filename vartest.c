@@ -109,11 +109,20 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	testlist = parse_test_definitions(file, conf->dump, conf->pretty);
+	testlist = parse_test_definitions(file);
 	fclose(file);
 
-	for (struct Test *test = testlist; test; test = test->next) {
+	if (conf->pretty) {
+		print_test_definitions(PRINTSTYLE_PRETTY);
+		return 0;
+	}
 
+	if (conf->dump) {
+		print_test_definitions(PRINTSTYLE_DUMP);
+		return 0;
+	}
+
+	for (struct Test *test = testlist; test; test = test->next) {
 
 		testnum++;
 

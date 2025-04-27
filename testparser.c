@@ -65,7 +65,7 @@ static struct TestArgument **currarglist = NULL;
 
 
 
-struct Test* parse_test_definitions(FILE *file, bool dump, bool pretty)
+struct Test* parse_test_definitions(FILE *file)
 {
 	char keyword[32] = { 0 };
 
@@ -73,17 +73,27 @@ struct Test* parse_test_definitions(FILE *file, bool dump, bool pretty)
 		if (!strcmp(keyword, "test")) {
 			ct_test(file);
 		} else {
-			printf("Unkown keyword on line %zu: '%s'\n", line, keyword);
+			printf("%s():Unkown keyword on line %zu: '%s'\n", __func__, line, keyword);
 			exit(1);
 		}
 	}
 
-	if (dump)
-		dumpall();
-	if (pretty)
-		prettyprint();
-
 	return testlisthead;
+}
+
+void print_test_definitions(enum TestPrintStyle style)
+{
+	switch (style) {
+	case PRINTSTYLE_DUMP:
+		dumpall();
+		break;
+	case PRINTSTYLE_PRETTY:
+		prettyprint();
+		break;
+	default:
+		fprintf(stderr, "%s(): invalid print style option %d\n", __func__, (int) style);
+		break;
+	}
 }
 
 void free_testlist(void)

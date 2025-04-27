@@ -36,5 +36,11 @@ struct Test {
 	struct  TestCommand *cmdlist;
 };
 
-struct Test* parse_test_definitions(FILE *file, bool dump, bool prettyprint);
+enum TestPrintStyle {
+	PRINTSTYLE_DUMP,
+	PRINTSTYLE_PRETTY,
+};
+
+struct Test* parse_test_definitions(FILE *file);
+void print_test_definitions(enum TestPrintStyle style);
 void free_testlist(void);
