@@ -36,7 +36,9 @@ struct read_text_args {
 	int         size;
 	const char *endswith;
 	const char *invalid;
+	const char *valid; /* if non-NULL, only these chars are valid */
 	const char *ignore;
+	int         minlen; /* minum length before considering endswith */
 	bool        keep_ending_char;
 	bool        allow_comments_within;
 };
@@ -63,7 +65,7 @@ static struct Test         **testlist = &testlisthead;
 static struct TestCommand  **currcmdlist = NULL;
 static struct TestArgument **currarglist = NULL;
 
-
+#define WHITESPACE " \t\r\n"
 
 struct Test* parse_test_definitions(FILE *file)
 {
@@ -73,9 +75,10 @@ struct Test* parse_test_definitions(FILE *file)
 		if (!strcmp(keyword, "test")) {
 			ct_test(file);
 		} else {
-			printf("%s():Unkown keyword on line %zu: '%s'\n", __func__, line, keyword);
+			printf("%s(): Unkown keyword on line %zu: '%s'\n", __func__, line, keyword);
 			exit(1);
 		}
+		memset(keyword, 0, sizeof keyword);
 	}
 
 	return testlisthead;
@@ -260,7 +263,7 @@ static void ct_test(FILE *file)
 			break;
 		}
 
-		if (strchr(" \t\r\n", c))
+		if (strchr(WHITESPACE, c))
 			continue;
 		if ('#' == c) {
 			ignore_comment(file);
@@ -310,23 +313,24 @@ static void test_commandlist(FILE *file)
 	char command[48] = { 0 };
 	int  len;
 
+	/* We are inside the braces '{...}' of a 'test'. We expect a list of commands or a closing
+	 * brace '}' which ends the command list.
+	 * For every command keyword we encounter, call test_command().
+	 * Ignore spaces and comments.
+	 */
+
 	while (EOF != (c = read_char(file))) {
 		if ('}' == c) {
 			unread_char(file, c);
 			return;
 		}
 
-		if (strchr(" \t\r\n", c)) {
+		if (strchr(WHITESPACE, c)) {
 			continue;
 		}
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
-		}
-
-		if (strchr("{(,:;", c)) {
-			fprintf(stderr, "%s(): invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
-			exit(1);
 		}
 
 		unread_char(file, c);
@@ -351,22 +355,25 @@ static void test_command(FILE *file, const char *cmdname)
 
 	while (EOF != (c = read_char(file))) {
 		if ('}' == c) {
+			/* closing brace of the enclosing 'test{...}' */
+			unread_char(file, c);
 			return;
 		}
+
+		if (strchr(WHITESPACE, c))
+			continue;
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
 		}
 
-		if (strchr(" \t\r\n", c))
-			continue;
 
 		if ('{' == c) {
 			test_command_args(file, cmdname);
 			return;
 		}
 
-		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
+		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu, expected command arguments\n", __func__, c, line, pos);
 		exit(1);
 	}
 
@@ -384,17 +391,17 @@ static void test_command(FILE *file, const char *cmdname)
 static void test_command_args(FILE *file, const char *cmdname)
 {
 	int    c;
-	char   arg[80] = { 0 }, val[80] = { 0 };
+	char   arg[48] = { 0 }, val[48] = { 0 };
 	bool   have_arg = false;
 
 
 	while (EOF != (c = read_char(file))) {
+		if (strchr(WHITESPACE, c))
+			continue;
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
 		}
-		if (strchr(" \t\r\n", c))
-			continue;
 
 		if (',' == c || '}' == c) {
 			if (have_arg) {
@@ -415,13 +422,13 @@ static void test_command_args(FILE *file, const char *cmdname)
 			}
 			unread_char(file, c);
 			if (read_text(.file = file, .buffer = arg, .size = sizeof arg,
-			              .endswith = ":,} \t\n", .invalid = "{(", .keep_ending_char = true)) {
+			              .endswith = ":,}" WHITESPACE, .invalid = "{(", .keep_ending_char = true)) {
 				have_arg = true;
 			}
 		} else {
 			if (':' == c) {
 				read_text(.file = file, .buffer = val, .size = sizeof val,
-				          .endswith = ",} \t\n", .invalid = "{(:", .keep_ending_char = true);
+				          .endswith = ",}" WHITESPACE, .invalid = "{(:", .keep_ending_char = true);
 			}
 		}
 
@@ -434,12 +441,12 @@ static int read_text_(struct read_text_args *args)
 {
 	int  c;
 	int  len = 0, limbo_len = 0;
-	char limbo_space[100] = { 0 };
+	char limbo_space[112] = { 0 };
 
 	assert(args->size > 0);
 
 	while (len < args->size - 1 && EOF != (c = read_char(args->file))) {
-		if (len == 0 && strchr(" \t\r\n", c))
+		if (len == 0 && strchr(WHITESPACE, c))
 			continue;
 		if (len == 0 && '#' == c) {
 			ignore_comment(args->file);
@@ -449,7 +456,7 @@ static int read_text_(struct read_text_args *args)
 		if (args->ignore && strchr(args->ignore, c))
 			continue;
 
-		if (strchr(args->endswith, c)) {
+		if (len >= args->minlen && strchr(args->endswith, c)) {
 			if (args->keep_ending_char)
 				unread_char(args->file, c);
 			break;
@@ -462,6 +469,11 @@ static int read_text_(struct read_text_args *args)
 			}
 			unread_char(args->file, c);
 			break;
+		}
+
+		if (args->valid && !strchr(args->valid, c)) {
+			fprintf(stderr, "%s(): invalid character '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
+			exit(1);
 		}
 
 		if (args->invalid && strchr(args->invalid, c)) {
@@ -512,8 +524,10 @@ static int read_text_(struct read_text_args *args)
 
 static int read_keyword(FILE *file, char *buffer, int size)
 {
+	const static char valid[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+
 	int len =  read_text(.file = file, .buffer = buffer, .size = size,
-	                 .endswith = "({ \t\r\n,;:\"'`", .invalid = "})",
+	                 .endswith = "({,;:\"'`#" WHITESPACE, .minlen = 1, .valid = valid,
 	                 .keep_ending_char = true, .allow_comments_within = false);
 
 	if (len == 0 && !feof(file)) {
