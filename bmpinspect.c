@@ -113,11 +113,6 @@ struct Bmpinfo {
 	enum BmpInfoVer version;
 };
 
-#define IH_PROFILEDATA_OFFSET (14L + 112L)
-
-#define MAX_ICCPROFILE_SIZE (1UL << 20)
-
-
 #define BI_RGB             0
 #define BI_RLE8            1
 #define BI_RLE4            2
@@ -136,20 +131,16 @@ struct Bmpinfo {
 #define BI_OS2_HUFFMAN  1001
 #define BI_OS2_RLE24    1002
 
-
 #define LCS_CALIBRATED_RGB      0
 #define LCS_sRGB                0x73524742 /* 'sRGB' */
 #define LCS_WINDOWS_COLOR_SPACE 0x57696e20 /* 'Win ' */
 #define PROFILE_LINKED          0x4c494e4b /* 'LINK' */
 #define PROFILE_EMBEDDED        0x4d424544 /* 'MBED' */
 
-
 #define LCS_GM_ABS_COLORIMETRIC 8
 #define LCS_GM_BUSINESS         1
 #define LCS_GM_GRAPHICS         2
 #define LCS_GM_IMAGES           4
-
-
 
 enum Type {
 	U32 = 1,
@@ -174,7 +165,7 @@ long s32_from_le(unsigned char *buf);
 unsigned u16_from_le(unsigned char *buf);
 int s16_from_le(unsigned char *buf);
 
-
+const char* info_header_name(const struct Bmpinfo *ih);
 const char* cstype_name(const struct Bmpinfo *ih);
 const char* compression_name(const struct Bmpinfo *ih);
 const char* intent_name(const struct Bmpinfo *ih);
@@ -184,11 +175,9 @@ const char* os2_orientation_name(const struct Bmpinfo *ih);
 const char* os2_units_name(const struct Bmpinfo *ih);
 const char* os2_encoding_name(const struct Bmpinfo *ih);
 
-
-const char* info_header_name(const struct Bmpinfo *ih);
-bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 bool read_file_header(FILE *file, struct Bmpfile *fh);
 bool read_info_header(FILE *file, const struct Bmpfile *fh, struct Bmpinfo *ih);
+bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 long long measure_file_size(FILE *file);
 
 
