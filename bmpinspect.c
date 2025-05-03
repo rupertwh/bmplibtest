@@ -166,6 +166,7 @@ unsigned u16_from_le(unsigned char *buf);
 int s16_from_le(unsigned char *buf);
 
 const char* info_header_name(const struct Bmpinfo *ih);
+const char* bmtype_descr(unsigned type);
 const char* cstype_name(const struct Bmpinfo *ih);
 const char* compression_name(const struct Bmpinfo *ih);
 const char* intent_name(const struct Bmpinfo *ih);
@@ -204,7 +205,19 @@ int main(int argc, char **argv)
 		goto abort;
 
 	if (fh.type != BMPFILE_BM) {
-		printf("Invalid signature: 0x%04x\n", fh.type);
+		switch (fh.type) {
+		case BMPFILE_BA:
+		case BMPFILE_CI:
+		case BMPFILE_CP:
+		case BMPFILE_IC:
+		case BMPFILE_PT:
+			printf("Unsupported BMP type '%c%c' [%s]\n", (int)fh.type & 0xff,
+			                                             (int)(fh.type >> 8) & 0xff, bmtype_descr(fh.type));
+			break;
+		default:
+			printf("Invalid signature: 0x%04x\n", fh.type);
+			break;
+		}
 		goto abort;
 	}
 
@@ -379,6 +392,19 @@ bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih)
 	}
 
 	return true;
+}
+
+const char* bmtype_descr(unsigned type)
+{
+	switch (type) {
+	case BMPFILE_BM: return "Windows or OS/2 BMP";
+	case BMPFILE_BA: return "OS/2 bitmap array";
+	case BMPFILE_CI: return "OS/2 color icon";
+	case BMPFILE_CP: return "OS/2 color pointer";
+	case BMPFILE_IC: return "OS/2 icon";
+	case BMPFILE_PT: return "OS/2 pointer";
+	default: return "(unknown)";
+	}
 }
 
 
