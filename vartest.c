@@ -155,11 +155,13 @@ int main(int argc, char *argv[])
 
 			if (conf->verbose > 1) {
 				printf("--'%s'\n", command->cmdname);
-				for (struct TestArgument *arg = command->arglist; arg; arg = arg->next) {
-					if (arg->argvalue && *arg->argvalue)
-						printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
-					else
-						printf(" +--'%s'\n", arg->argname);
+				if (conf->verbose > 2) {
+					for (struct TestArgument *arg = command->arglist; arg; arg = arg->next) {
+						if (arg->argvalue && *arg->argvalue)
+							printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
+						else
+							printf(" +--'%s'\n", arg->argname);
+					}
 				}
 			}
 			if (!perform(command)) {
