@@ -113,6 +113,16 @@ struct Bmpinfo {
 	enum BmpInfoVer version;
 };
 
+
+struct Bmparray {
+	unsigned      type;
+	unsigned long size;
+	unsigned long offsetnext;
+	unsigned      screenwidth;
+	unsigned      screenheight;
+};
+
+
 #define BI_RGB             0
 #define BI_RLE8            1
 #define BI_RLE4            2
@@ -178,8 +188,11 @@ const char* os2_encoding_name(const struct Bmpinfo *ih);
 
 bool read_file_header(FILE *file, struct Bmpfile *fh);
 bool read_info_header(FILE *file, const struct Bmpfile *fh, struct Bmpinfo *ih);
+bool array_header_from_file_header(struct Bmparray *ah, const struct Bmpfile *fh);
+bool read_array_header(FILE *file, struct Bmparray *ah);
 bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 long long measure_file_size(FILE *file);
+bool display_bitmap_array(FILE *file, const struct Bmpfile *fh);
 
 
 int main(int argc, char **argv)
@@ -207,6 +220,10 @@ int main(int argc, char **argv)
 	if (fh.type != BMPFILE_BM) {
 		switch (fh.type) {
 		case BMPFILE_BA:
+			bool ret = display_bitmap_array(file, &fh);
+			fclose(file);
+			return !ret;
+
 		case BMPFILE_CI:
 		case BMPFILE_CP:
 		case BMPFILE_IC:
@@ -349,6 +366,41 @@ long long measure_file_size(FILE *file)
 	fseek(file, pos, SEEK_SET);
 
 	return (long long) size;
+}
+
+
+bool display_bitmap_array(FILE *file, const struct Bmpfile *fh)
+{
+	struct Bmparray ah;
+	int             count = 0;
+
+	if (!array_header_from_file_header(&ah, fh))
+		return false;
+
+	printf("OS/2 Bitmap Array:\n");
+	do {
+		printf("\nEntry %02d:\n", ++count);
+		printf("   Type       : %c%c [%s]\n", ah.type & 0xff, (ah.type >> 8) & 0xff, bmtype_descr(ah.type));
+		printf("   Screenwidth: %u\n", ah.screenwidth);
+		printf("  Screenheight: %u\n", ah.screenheight);
+
+		if (ah.offsetnext) {
+			if (ah.offsetnext > (unsigned long)LONG_MAX) {
+				fprintf(stderr, "%s(): invalid offset: %lu\n", __func__, ah.offsetnext);
+				return false;
+			}
+			if (fseek(file, ah.offsetnext, SEEK_SET)) {
+				perror(__func__);
+				return false;
+			}
+			if (!read_array_header(file, &ah))
+				return false;
+		} else {
+			break;
+		}
+	} while (true);
+
+	return true;
 }
 
 
@@ -525,6 +577,7 @@ const char* os2_encoding_name(const struct Bmpinfo *ih)
 }
 
 
+
 bool read_file_header(FILE *file, struct Bmpfile *fh)
 {
 	unsigned char buffer[14] = { 0 };
@@ -542,6 +595,43 @@ bool read_file_header(FILE *file, struct Bmpfile *fh)
 
 	fh->xhotspot = s16_from_le(buffer + 6);
 	fh->yhotspot = s16_from_le(buffer + 8);
+
+	return true;
+}
+
+bool array_header_from_file_header(struct Bmparray *ah, const struct Bmpfile *fh)
+{
+	memset(ah, 0, sizeof *ah);
+
+	if (fh->type != BMPFILE_BA) {
+		fprintf(stderr, "%s(): no 'BA' signature\n", __func__);
+		return false;
+	}
+
+	ah->type = fh->type;
+	ah->size = fh->size;
+	ah->offsetnext   = (unsigned long)fh->reserved1 | (unsigned long)fh->reserved2 << 16;
+	ah->screenwidth  = fh->offbits & 0xffff;
+	ah->screenheight = (fh->offbits >> 16) & 0xffff;
+
+	return true;;
+}
+
+
+bool read_array_header(FILE *file, struct Bmparray *ah)
+{
+	unsigned char buffer[14] = { 0 };
+
+	if (14 != fread(buffer, 1, sizeof buffer, file)) {
+		perror("read array header");
+		return false;
+	}
+
+	ah->type         = u16_from_le(buffer +  0);
+	ah->size         = u32_from_le(buffer +  2);
+	ah->offsetnext   = u32_from_le(buffer +  6);
+	ah->screenwidth  = u16_from_le(buffer +  10);
+	ah->screenheight = u16_from_le(buffer +  12);
 
 	return true;
 }
