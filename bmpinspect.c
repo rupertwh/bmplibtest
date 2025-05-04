@@ -192,7 +192,9 @@ bool array_header_from_file_header(struct Bmparray *ah, const struct Bmpfile *fh
 bool read_array_header(FILE *file, struct Bmparray *ah);
 bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 long long measure_file_size(FILE *file);
+bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent);
 bool display_bitmap_array(FILE *file, const struct Bmpfile *fh);
+bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent);
 
 
 int main(int argc, char **argv)
@@ -214,36 +216,126 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	printf("\n--- %s ---\n", argv[1]);
+
 	if (!read_file_header(file, &fh))
 		goto abort;
 
-	if (fh.type != BMPFILE_BM) {
-		switch (fh.type) {
+	bool ret = false;
+
+	switch (fh.type) {
+		case BMPFILE_BM:
+		case BMPFILE_IC:
+		case BMPFILE_PT:
+			ret = display_bitmap(file, &fh, 0);
+			break;
+
 		case BMPFILE_BA:
-			bool ret = display_bitmap_array(file, &fh);
-			fclose(file);
-			return !ret;
+			ret = display_bitmap_array(file, &fh);
+			break;
 
 		case BMPFILE_CI:
 		case BMPFILE_CP:
-		case BMPFILE_IC:
-		case BMPFILE_PT:
-			printf("Unsupported BMP type '%c%c' [%s]\n", (int)fh.type & 0xff,
-			                                             (int)(fh.type >> 8) & 0xff, bmtype_descr(fh.type));
+			ret = display_cicp(file, &fh, 0);
 			break;
 		default:
 			printf("Invalid signature: 0x%04x\n", fh.type);
 			break;
-		}
-		goto abort;
 	}
 
-	if (!read_info_header(file, &fh, &ih))
-		goto abort;
+	fclose(file);
+	file = NULL;
+
+	return !ret;
+
+abort:
+	if (file)
+		fclose(file);
+	return 1;
+}
+
+static void spaces(int n)
+{
+	for (int i = 0; i < n; i++)
+		putchar(' ');
+}
+
+bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
+{
+	struct Bmpinfo ih;
+	struct Bmpfile fh2;
+	long           pos, offset;
+
+	/* first, the monochrome bitmap */
+	memset(&ih, 0, sizeof ih);
+
+	if (-1 == (pos = ftell(file))) {
+		perror(__func__);
+		return false;
+	}
+
+	if (!read_info_header(file, fh, &ih))
+		return false;
+
+	if (fseek(file, pos, SEEK_SET)) {
+		perror(__func__);
+		return false;
+	}
+
+
+	spaces(indent);
+	printf("Color Icon - Monochrome XOR and AND masks\n");
+	if (!display_bitmap(file, fh, indent + 5))
+		return false;
+
+	if (ih.bitcount != 1) {
+		fprintf(stderr, "expected a monochrome bitmap, first!\n");
+		return false;
+	}
+
+	if (fseek(file, pos, SEEK_SET)) {
+		perror(__func__);
+		return false;
+	}
+
+	if (fh->size > 26)
+		offset = fh->size - 14 + 8;
+	else
+		offset = fh->size - 14 + 6;
+
+	if (fseek(file, offset, SEEK_CUR)) {
+		perror(__func__);
+		return false;
+	}
+
+	memset(&fh2, 0, sizeof fh2);
+	if (!read_file_header(file, &fh2))
+		return false;
+
+	if (fh2.type != BMPFILE_CI && fh2.type != BMPFILE_CP) {
+		fprintf(stderr, "Unexpected file type 0x%04x (%s) on color bitmap", fh2.type, bmtype_descr(fh2.type));
+		return false;
+	}
+	spaces(indent);
+	printf("Color Icon - color bitmap\n");
+
+	return display_bitmap(file, &fh2, indent + 5);
+
+}
+
+bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent)
+{
+	struct Bmpinfo ih;
+
+	memset(&ih, 0, sizeof ih);
+
+	if (!read_info_header(file, fh, &ih))
+		return false;
 
 	int color_size = ih.version >= BMPINFO_OS22X ? 4 : 3;
-	int max_colors = (fh.offbits - ih.size - 14) / color_size;
+	int max_colors = (fh->offbits - ih.size - 14) / color_size;
 	int ncolors = 0, def_colors = 0, usable_colors = 0;
+
 	if (ih.bitcount <= 8) {
 		def_colors = 1 << ih.bitcount;
 		usable_colors = MIN(def_colors, max_colors);
@@ -256,94 +348,137 @@ int main(int argc, char **argv)
 	}
 
 	long long filesize = measure_file_size(file);
-	long long maximgsize = filesize - fh.offbits;
+	long long maximgsize = filesize - fh->offbits;
 	if (ih.cstype == PROFILE_EMBEDDED)
 		maximgsize -= filesize - (14LL + ih.profiledata);
 
-	bool badimgsize = maximgsize < (long long) ih.sizeimage;
+	bool badimgsize  = maximgsize < (long long) ih.sizeimage;
 	bool badbitcount = ih.bitcount < 1 || (ih.bitcount > 32 && ih.bitcount != 64);
 
 	bool os2 = ih.version == BMPINFO_OS21X || ih.version == BMPINFO_OS22X;
 
-	printf("\nFile header:\n");
-	print_field(&fh.type, U16, "type", false, NULL);
-	print_field(&fh.size, U32, "size", (long long)fh.size != filesize, NULL);
+	putchar('\n');
+	spaces(indent);
+	printf("File header: [%s]\n", bmtype_descr(fh->type));
+	spaces(indent);
+	print_field(&fh->type, U16, "type", false, NULL);
+	spaces(indent);
+	print_field(&fh->size, U32, "size", (long long)fh->size != filesize, NULL);
 	if (os2) {
-		print_field(&fh.reserved1, S16, "xhotspot", false, NULL);
-		print_field(&fh.reserved2, S16, "yhotspot", false, NULL);
+		spaces(indent);
+		print_field(&fh->reserved1, S16, "xhotspot", false, NULL);
+		spaces(indent);
+		print_field(&fh->reserved2, S16, "yhotspot", false, NULL);
 	} else {
-		print_field(&fh.reserved1, U16, "reserved1", false, NULL);
-		print_field(&fh.reserved2, U16, "reserved2", false, NULL);
+		spaces(indent);
+		print_field(&fh->reserved1, U16, "reserved1", false, NULL);
+		spaces(indent);
+		print_field(&fh->reserved2, U16, "reserved2", false, NULL);
 
 	}
-	print_field(&fh.offbits, U32, "offbits", false, NULL);
+	spaces(indent);
+	print_field(&fh->offbits, U32, "offbits", false, NULL);
 
-	fclose(file);
-	file = NULL;
 
-	printf("\nInfo header: %s\n", info_header_name(&ih));
+	putchar('\n');
+	spaces(indent);
+	printf("Info header: %s\n", info_header_name(&ih));
 
+	spaces(indent);
 	printf("(size: %d)\n", (int) ih.size);
+	spaces(indent);
 	print_field(&ih.width, S32, "width", false, NULL);
+	spaces(indent);
 	print_field(&ih.height, S32, "height", false, NULL);
+	spaces(indent);
 	print_field(&ih.planes, U16, "planes", false, NULL);
+	spaces(indent);
 	print_field(&ih.bitcount, U16, "bitcount", badbitcount , NULL);
 
 	if (ih.version >= BMPINFO_OS22X) {
+		spaces(indent);
 		print_field(&ih.compression, U32, "compression", false, compression_name(&ih));
+		spaces(indent);
 		print_field(&ih.sizeimage, U32, "image size", badimgsize, NULL);
+		spaces(indent);
 		print_field(&ih.xpelspermeter, S32, "xpelspermeter", false, NULL);
+		spaces(indent);
+		spaces(indent);
 		print_field(&ih.ypelspermeter, S32, "ypelspermeter", false, NULL);
+		spaces(indent);
 		print_field(&ih.clrused, U32, "clrused", ncolors > usable_colors, NULL);
+		spaces(indent);
 		print_field(&ih.clrimportant, U32, "clrimportant", false, NULL);
 		if (ih.version >= BMPINFO_V4) {
+			spaces(indent);
 			print_field(&ih.redmask, U32, "red mask", false, NULL);
+			spaces(indent);
 			print_field(&ih.greenmask, U32, "green mask", false, NULL);
+			spaces(indent);
 			print_field(&ih.bluemask, U32, "blue mask", false, NULL);
+			spaces(indent);
 			print_field(&ih.alphamask, U32, "alpha mask", false, NULL);
+			spaces(indent);
 			print_field(&ih.cstype, U32, "CS type", false, cstype_name(&ih));
 			if (ih.version >= BMPINFO_V5) {
+				spaces(indent);
 				print_field(&ih.intent, U32, "rendering intent", false, intent_name(&ih));
+				spaces(indent);
 				print_field(&ih.profiledata, U32, "profile data", false, NULL);
+				spaces(indent);
 				print_field(&ih.profilesize, U32, "profile size", false, NULL);
+				spaces(indent);
 				print_field(&ih.reserved, U32, "reserved", false, NULL);
 			}
 		}
 	}
 	if (ih.version == BMPINFO_OS22X) {
+		spaces(indent);
 		print_field(&ih.units, U16, "units", false, os2_units_name(&ih));
+		spaces(indent);
 		print_field(&ih.reserved_os2, U16, "reserved", false, NULL);
+		spaces(indent);
 		print_field(&ih.orientation, U16, "orientation", false, os2_orientation_name(&ih));
+		spaces(indent);
 		print_field(&ih.halftone_alg, U16, "halftone alg.", false, os2_halftonealg_name(&ih));
+		spaces(indent);
 		print_field(&ih.halftone_parm1, U32, "halftone parm1", false, NULL);
+		spaces(indent);
 		print_field(&ih.halftone_parm2, U32, "halftone parm2", false, NULL);
+		spaces(indent);
 		print_field(&ih.color_encoding, U32, "color encoding", false, os2_encoding_name(&ih));
+		spaces(indent);
 		print_field(&ih.app_id, U32, "app_id", false, NULL);
 	}
 
 
 
-	if (fh.size == 14 + ih.size) {
-		printf("\nfh.size == file header + info header (ok for OS/2)\n");
+	if (fh->size == 14 + ih.size) {
+		putchar('\n');
+		spaces(indent);
+		printf("fh.size == file header + info header (ok for OS/2)\n");
 	}
-	else if (filesize > 0 && filesize != (long long) fh.size) {
-		printf("\nActual file size: 0x%08llx (%lld)!\n", (unsigned long long) filesize, filesize);
+	else if (filesize > 0 && filesize != (long long) fh->size) {
+		putchar('\n');
+		spaces(indent);
+		printf("Actual file size: 0x%08llx (%lld)!\n", (unsigned long long) filesize, filesize);
 	}
 
 	if (ncolors > max_colors) {
-		printf("\nHeader claims %d colors, but there is only room for %d colors!\n", ncolors, max_colors);
+		putchar('\n');
+		spaces(indent);
+		printf("Header claims %d colors, but there is only room for %d colors!\n", ncolors, max_colors);
 	} else if (ncolors > usable_colors) {
-		printf("\nOversized color palette (%d colors, instead of usable %d colors)!\n", ncolors, usable_colors);
+		putchar('\n');
+		spaces(indent);
+		printf("Oversized color palette (%d colors, instead of usable %d colors)!\n", ncolors, usable_colors);
 	}
 
 	puts("");
 
-	return 0;
-abort:
-	if (file)
-		fclose(file);
-	return 1;
+	return true;
 }
+
 
 
 long long measure_file_size(FILE *file)
@@ -369,12 +504,12 @@ long long measure_file_size(FILE *file)
 }
 
 
-bool display_bitmap_array(FILE *file, const struct Bmpfile *fh)
+bool display_bitmap_array(FILE *file, const struct Bmpfile *orgfh)
 {
 	struct Bmparray ah;
 	int             count = 0;
 
-	if (!array_header_from_file_header(&ah, fh))
+	if (!array_header_from_file_header(&ah, orgfh))
 		return false;
 
 	printf("OS/2 Bitmap Array:\n");
@@ -383,6 +518,27 @@ bool display_bitmap_array(FILE *file, const struct Bmpfile *fh)
 		printf("   Type       : %c%c [%s]\n", ah.type & 0xff, (ah.type >> 8) & 0xff, bmtype_descr(ah.type));
 		printf("   Screenwidth: %u\n", ah.screenwidth);
 		printf("  Screenheight: %u\n", ah.screenheight);
+
+		struct Bmpfile fh;
+		memset(&fh, 0, sizeof fh);
+		if (read_file_header(file, &fh)) {
+			switch (fh.type) {
+			case BMPFILE_BM:
+			case BMPFILE_IC:
+			case BMPFILE_PT:
+				display_bitmap(file, &fh, 5);
+				break;
+			case BMPFILE_CI:
+			case BMPFILE_CP:
+				display_cicp(file, &fh, 5);
+				break;
+			default:
+				fprintf(stderr, "%s(): unexpected type 0x%04x (%s)\n", __func__, fh.type, bmtype_descr(fh.type));
+				break;
+			}
+		} else {
+			fprintf(stderr, "Error reading file header\n");
+		}
 
 		if (ah.offsetnext) {
 			if (ah.offsetnext > (unsigned long)LONG_MAX) {
@@ -453,8 +609,8 @@ const char* bmtype_descr(unsigned type)
 	case BMPFILE_BA: return "OS/2 bitmap array";
 	case BMPFILE_CI: return "OS/2 color icon";
 	case BMPFILE_CP: return "OS/2 color pointer";
-	case BMPFILE_IC: return "OS/2 icon";
-	case BMPFILE_PT: return "OS/2 pointer";
+	case BMPFILE_IC: return "OS/2 icon (b/w)";
+	case BMPFILE_PT: return "OS/2 pointer (b/w)";
 	default: return "(unknown)";
 	}
 }
