@@ -550,15 +550,21 @@ static bool perform_loadbmp(struct TestArgument *args)
 				if (!success)
 					printf("%s\n", bmp_errmsg(h));
 				goto abort;
+			} else {
+				success = true;
 			}
 		}
 
 	} else {
 		if ((res = bmpread_load_image(h, &img->buffer))) {
 			success = (res == expected);
-			if (!success)
+			if (!success) {
 				printf("%s\n", bmp_errmsg(h));
-			goto abort;
+				goto abort;
+			}
+		}
+		else {
+			success = true;
 		}
 	}
 
@@ -571,7 +577,7 @@ static bool perform_loadbmp(struct TestArgument *args)
 		goto abort;
 
 	img = NULL;
-	success = (expected == BMP_RESULT_OK);
+	//success = (expected == BMP_RESULT_OK);
 
 	/* fall through */
 abort:
