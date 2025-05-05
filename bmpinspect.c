@@ -266,6 +266,11 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 	struct Bmpfile fh2;
 	long           pos, offset;
 
+	/*
+	 * CI/CP (color icon/color pointer) contain two file header + info header pairs,
+	 * one for the monochrome XOR/AND map and one for the actual color image
+	 */
+
 	/* first, the monochrome bitmap */
 	memset(&ih, 0, sizeof ih);
 
@@ -284,7 +289,7 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 
 
 	spaces(indent);
-	printf("Color Icon - Monochrome XOR and AND masks\n");
+	printf("%s - Monochrome XOR and AND masks\n", bmtype_descr(fh->type));
 	if (!display_bitmap(file, fh, indent + 5))
 		return false;
 
@@ -308,6 +313,7 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 		return false;
 	}
 
+	/* then the color bitmap */
 	memset(&fh2, 0, sizeof fh2);
 	if (!read_file_header(file, &fh2))
 		return false;
@@ -317,7 +323,7 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 		return false;
 	}
 	spaces(indent);
-	printf("Color Icon - color bitmap\n");
+	printf("%s - color bitmap\n", bmtype_descr(fh2.type));
 
 	return display_bitmap(file, &fh2, indent + 5);
 
