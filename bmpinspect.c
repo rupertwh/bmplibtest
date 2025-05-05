@@ -18,6 +18,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
@@ -123,6 +124,16 @@ struct Bmparray {
 };
 
 
+
+struct Arrayinfo {
+	int screenwidth, screenheight;
+	int type;
+	int width, height;
+	int bitcount;
+	int ncolors;
+};
+
+
 #define BI_RGB             0
 #define BI_RLE8            1
 #define BI_RLE4            2
@@ -192,9 +203,9 @@ bool array_header_from_file_header(struct Bmparray *ah, const struct Bmpfile *fh
 bool read_array_header(FILE *file, struct Bmparray *ah);
 bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih);
 long long measure_file_size(FILE *file);
-bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent);
+bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent, struct Arrayinfo *ai);
 bool display_bitmap_array(FILE *file, const struct Bmpfile *fh);
-bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent);
+bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent, struct Arrayinfo *ai);
 
 
 int main(int argc, char **argv)
@@ -227,7 +238,7 @@ int main(int argc, char **argv)
 		case BMPFILE_BM:
 		case BMPFILE_IC:
 		case BMPFILE_PT:
-			ret = display_bitmap(file, &fh, 0);
+			ret = display_bitmap(file, &fh, 0, NULL);
 			break;
 
 		case BMPFILE_BA:
@@ -236,7 +247,7 @@ int main(int argc, char **argv)
 
 		case BMPFILE_CI:
 		case BMPFILE_CP:
-			ret = display_cicp(file, &fh, 0);
+			ret = display_cicp(file, &fh, 0, NULL);
 			break;
 		default:
 			printf("Invalid signature: 0x%04x\n", fh.type);
@@ -260,11 +271,11 @@ static void spaces(int n)
 		putchar(' ');
 }
 
-bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
+bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent, struct Arrayinfo *ai)
 {
 	struct Bmpinfo ih;
 	struct Bmpfile fh2;
-	long           pos, offset;
+	long           pos;
 
 	/*
 	 * CI/CP (color icon/color pointer) contain two file header + info header pairs,
@@ -282,15 +293,16 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 	if (!read_info_header(file, fh, &ih))
 		return false;
 
+	/* reset position back to start of info header, as disply_bitmap() will read
+	 * it again */
 	if (fseek(file, pos, SEEK_SET)) {
 		perror(__func__);
 		return false;
 	}
 
-
 	spaces(indent);
 	printf("%s - Monochrome XOR and AND masks\n", bmtype_descr(fh->type));
-	if (!display_bitmap(file, fh, indent + 5))
+	if (!display_bitmap(file, fh, indent + 5, NULL))
 		return false;
 
 	if (ih.bitcount != 1) {
@@ -298,17 +310,9 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 		return false;
 	}
 
-	if (fseek(file, pos, SEEK_SET)) {
-		perror(__func__);
-		return false;
-	}
-
-	if (fh->size > 26)
-		offset = fh->size - 14 + 8;
-	else
-		offset = fh->size - 14 + 6;
-
-	if (fseek(file, offset, SEEK_CUR)) {
+	/* skip color palette, either 2x 4 bytes or 2x 3 bytes, depending
+	 * on header version  */
+	if (fseek(file, fh->size > 26 ? 8 : 6, SEEK_CUR)) {
 		perror(__func__);
 		return false;
 	}
@@ -325,11 +329,11 @@ bool display_cicp(FILE *file, const struct Bmpfile *fh, int indent)
 	spaces(indent);
 	printf("%s - color bitmap\n", bmtype_descr(fh2.type));
 
-	return display_bitmap(file, &fh2, indent + 5);
+	return display_bitmap(file, &fh2, indent + 5, ai);
 
 }
 
-bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent)
+bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent, struct Arrayinfo *ai)
 {
 	struct Bmpinfo ih;
 
@@ -353,6 +357,12 @@ bool display_bitmap(FILE *file, const struct Bmpfile *fh, int indent)
 		max_colors = 0;
 	}
 
+	if (ai) {
+		ai->ncolors  = ncolors;
+		ai->bitcount = ih.bitcount;
+		ai->width    = ih.width;
+		ai->height   = ih.height;
+	}
 	long long filesize = measure_file_size(file);
 	long long maximgsize = filesize - fh->offbits;
 	if (ih.cstype == PROFILE_EMBEDDED)
@@ -510,33 +520,55 @@ long long measure_file_size(FILE *file)
 }
 
 
+
+
 bool display_bitmap_array(FILE *file, const struct Bmpfile *orgfh)
 {
-	struct Bmparray ah;
-	int             count = 0;
+	struct Bmparray   ah;
+	int               count = 0;
+	struct Arrayinfo *ar = NULL;
+	int               ar_n = 0, ar_alloc = 0;
+
 
 	if (!array_header_from_file_header(&ah, orgfh))
 		return false;
 
 	printf("OS/2 Bitmap Array:\n");
 	do {
+		if (ar_n >= ar_alloc) {
+			int newalloc = ar_alloc + 10;
+			struct Arrayinfo *tmp = realloc(ar, newalloc * sizeof *ar);
+			if (!tmp) {
+				perror(__func__);
+				exit(1);
+			}
+			ar = tmp;
+			memset(&ar[ar_alloc], 0, (newalloc - ar_alloc) * sizeof *ar);
+			ar_alloc = newalloc;
+		}
+
 		printf("\nEntry %02d:\n", ++count);
 		printf("   Type       : %c%c [%s]\n", ah.type & 0xff, (ah.type >> 8) & 0xff, bmtype_descr(ah.type));
 		printf("   Screenwidth: %u\n", ah.screenwidth);
 		printf("  Screenheight: %u\n", ah.screenheight);
 
+		ar[ar_n].screenwidth  = ah.screenwidth;
+		ar[ar_n].screenheight = ah.screenheight;
+
 		struct Bmpfile fh;
 		memset(&fh, 0, sizeof fh);
 		if (read_file_header(file, &fh)) {
+			ar[ar_n].type = fh.type;
+
 			switch (fh.type) {
 			case BMPFILE_BM:
 			case BMPFILE_IC:
 			case BMPFILE_PT:
-				display_bitmap(file, &fh, 5);
+				display_bitmap(file, &fh, 5, &ar[ar_n]);
 				break;
 			case BMPFILE_CI:
 			case BMPFILE_CP:
-				display_cicp(file, &fh, 5);
+				display_cicp(file, &fh, 5, &ar[ar_n]);
 				break;
 			default:
 				fprintf(stderr, "%s(): unexpected type 0x%04x (%s)\n", __func__, fh.type, bmtype_descr(fh.type));
@@ -545,6 +577,8 @@ bool display_bitmap_array(FILE *file, const struct Bmpfile *orgfh)
 		} else {
 			fprintf(stderr, "Error reading file header\n");
 		}
+
+		ar_n++;
 
 		if (ah.offsetnext) {
 			if (ah.offsetnext > (unsigned long)LONG_MAX) {
@@ -562,6 +596,20 @@ bool display_bitmap_array(FILE *file, const struct Bmpfile *orgfh)
 		}
 	} while (true);
 
+	puts("\nSummary:");
+	puts("\n #      screen dim.  colors    width x height   bits/pixel");
+	char colorstr[20];
+	char screendim[14];
+	char dim[14];
+	for (int i = 0; i < ar_n; i++) {
+		if (ar[i].ncolors > 0)
+			snprintf(colorstr, sizeof colorstr, "%3d", ar[i].ncolors);
+		else
+			snprintf(colorstr, sizeof colorstr, "%s", "RGB");
+		snprintf(screendim, sizeof screendim, "%d x %d", ar[i].screenwidth, ar[i].screenheight);
+		snprintf(dim, sizeof dim, "%d x %d", ar[i].width, ar[i].height);
+		printf("%02d: %14s     %s    %14s       %2d\n", i + 1, screendim, colorstr, dim, ar[i].bitcount);
+	}
 	return true;
 }
 
