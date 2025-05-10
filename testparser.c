@@ -37,9 +37,9 @@ struct read_text_args {
 	const char *endswith;
 	const char *invalid;
 	const char *valid; /* if non-NULL, only these chars are valid */
-	const char *ignore;
 	int         minlen; /* minum length before considering endswith */
 	bool        keep_ending_char;
+	bool        newline_to_space; /* convert newline and following whitespace to a single space */
 	bool        allow_comments_within;
 };
 #define read_text(...) read_text_(&(struct read_text_args){ __VA_ARGS__ })
@@ -276,7 +276,7 @@ static void ct_test(FILE *file)
 				exit(1);
 			}
 			descr_len = read_text(.file = file, .buffer = descr, .size = sizeof descr,
-			                      .endswith = ")", .invalid = "{}(", .ignore = "\r\n",
+			                      .endswith = ")", .invalid = "{}(", .newline_to_space = true,
 			                      .keep_ending_char = false, .allow_comments_within = true);
 			has_descr = true;
 			continue;
@@ -453,9 +453,6 @@ static int read_text_(struct read_text_args *args)
 			continue;
 		}
 
-		if (args->ignore && strchr(args->ignore, c))
-			continue;
-
 		if (len >= args->minlen && strchr(args->endswith, c)) {
 			if (args->keep_ending_char)
 				unread_char(args->file, c);
@@ -481,10 +478,17 @@ static int read_text_(struct read_text_args *args)
 			exit(1);
 		}
 
-		if (strchr(" \t", c)) {
-			if (len == 0)
-				continue;
-			if (limbo_len + 1 == sizeof limbo_space - 1) {
+		if (strchr(WHITESPACE, c)) {
+			if (args->newline_to_space && strchr("\r\n", c)) {
+				while (EOF != (c = read_char(args->file))) {
+					if (strchr(WHITESPACE, c))
+						continue;
+					unread_char(args->file, c);
+					break;
+				}
+				c = ' ';
+			}
+			if (limbo_len + 1 >= sizeof limbo_space - 1) {
 				fprintf(stderr, "%s(): ran out of limbo space on line %zu\n", __func__, line);
 				exit(1);
 			}
