@@ -41,6 +41,7 @@ struct read_text_args {
 	bool        keep_ending_char;
 	bool        newline_to_space; /* convert newline and following whitespace to a single space */
 	bool        allow_comments_within;
+	bool        no_eof; /* must not encounter EOF */
 };
 #define read_text(...) read_text_(&(struct read_text_args){ __VA_ARGS__ })
 static int read_text_(struct read_text_args *args);
@@ -277,7 +278,7 @@ static void ct_test(FILE *file)
 			}
 			descr_len = read_text(.file = file, .buffer = descr, .size = sizeof descr,
 			                      .endswith = ")", .invalid = "{}(", .newline_to_space = true,
-			                      .keep_ending_char = false, .allow_comments_within = true);
+			                      .keep_ending_char = false, .allow_comments_within = true, .no_eof = true);
 			has_descr = true;
 			continue;
 		}
@@ -377,7 +378,7 @@ static void test_command(FILE *file, const char *cmdname)
 		exit(1);
 	}
 
-	if (EOF == 'c') {
+	if (EOF == c) {
 		if (!feof(file))
 			perror(__func__);
 		else
@@ -514,12 +515,15 @@ static int read_text_(struct read_text_args *args)
 		fprintf(stderr, "%s(): buffer too short on line %zu\n", __func__, line);
 		exit(1);
 	}
-	if (EOF == 'c') {
+	if (EOF == c) {
 		if (!feof(args->file)) {
-			perror("read_text");
+			perror(__func__);
 			exit(1);
 		}
-		fprintf(stderr, "%s(): EOF while reading text: '%s'\n", __func__, args->buffer);
+		if (args->no_eof) {
+			fprintf(stderr, "%s(): EOF while reading text: '%s'\n", __func__, args->buffer);
+			exit(1);
+		}
 	}
 
 	return len;
