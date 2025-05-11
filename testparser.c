@@ -355,19 +355,12 @@ static void test_command(FILE *file, const char *cmdname)
 	int  c;
 
 	while (EOF != (c = read_char(file))) {
-		if ('}' == c) {
-			/* closing brace of the enclosing 'test{...}' */
-			unread_char(file, c);
-			return;
-		}
-
 		if (strchr(WHITESPACE, c))
 			continue;
 		if ('#' == c) {
 			ignore_comment(file);
 			continue;
 		}
-
 
 		if ('{' == c) {
 			test_command_args(file);
@@ -385,7 +378,6 @@ static void test_command(FILE *file, const char *cmdname)
 			fprintf(stderr, "%s(): EOF while reading commad '%s'\n", __func__, cmdname);
 		exit(1);
 	}
-
 }
 
 
@@ -422,13 +414,13 @@ static void test_command_args(FILE *file)
 				exit(1);
 			}
 			unread_char(file, c);
-			if (read_text(.file = file, .buffer = arg, .size = sizeof arg,
+			if (read_text(.file = file, .buffer = arg, .size = sizeof arg, .no_eof = true,
 			              .endswith = ":,}" WHITESPACE, .invalid = "{(", .keep_ending_char = true)) {
 				have_arg = true;
 			}
 		} else {
 			if (':' == c) {
-				read_text(.file = file, .buffer = val, .size = sizeof val,
+				read_text(.file = file, .buffer = val, .size = sizeof val, .no_eof = true,
 				          .endswith = ",}" WHITESPACE, .invalid = "{(:", .keep_ending_char = true);
 			}
 		}
@@ -489,7 +481,7 @@ static int read_text_(struct read_text_args *args)
 				}
 				c = ' ';
 			}
-			if (limbo_len + 1 >= sizeof limbo_space - 1) {
+			if ((size_t)limbo_len + 1 >= sizeof limbo_space - 1) {
 				fprintf(stderr, "%s(): ran out of limbo space on line %zu\n", __func__, line);
 				exit(1);
 			}
