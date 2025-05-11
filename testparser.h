@@ -18,22 +18,28 @@
  */
 
 
-struct TestArgument {
-	struct TestArgument *next;
-	char                *argname;
-	char                *argvalue;
+struct Argument {
+	struct Argument *next;
+	char            *argname;
+	char            *argvalue;
 };
 
-struct TestCommand {
-	struct TestCommand  *next;
-	char                *cmdname;
-	struct TestArgument *arglist;
+struct Action {
+	struct Action   *next;
+	char            *actname;
+	struct Argument *arglist;
 };
 
-struct Test {
-	struct Test         *next;
-	char                *descr;
-	struct  TestCommand *cmdlist;
+enum CommandType {
+	COMMAND_TEST,
+	COMMAND_SETTINGS,
+};
+
+struct Command {
+	struct Command  *next;
+	enum CommandType type;
+	char            *descr;
+	struct Action   *actionlist;
 };
 
 enum TestPrintStyle {
@@ -41,6 +47,6 @@ enum TestPrintStyle {
 	PRINTSTYLE_PRETTY,
 };
 
-struct Test* parse_test_definitions(FILE *file);
+struct Command* parse_test_definitions(FILE *file);
 void print_test_definitions(enum TestPrintStyle style);
-void free_testlist(void);
+void free_cmdlist(void);

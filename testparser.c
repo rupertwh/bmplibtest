@@ -46,10 +46,10 @@ struct read_text_args {
 #define read_text(...) read_text_(&(struct read_text_args){ __VA_ARGS__ })
 static int read_text_(struct read_text_args *args);
 
-static void ct_test(FILE *file);
-static void test_commandlist(FILE *file);
-static void test_command(FILE *file, const char *cmdname);
-static void test_command_args(FILE *file);
+static void parse_command(FILE *file, const char *cmdname);
+static void parse_actionlist(FILE *file);
+static void parse_action(FILE *file, const char *actname);
+static void parse_action_args(FILE *file);
 
 static int read_char(FILE *file);
 static void unread_char(FILE *file, int c);
@@ -61,28 +61,23 @@ static size_t line    = 1;
 static size_t pos     = 0;
 static size_t prevpos = 0;
 
-static struct Test          *testlisthead = NULL;
-static struct Test         **testlist = &testlisthead;
-static struct TestCommand  **currcmdlist = NULL;
-static struct TestArgument **currarglist = NULL;
+static struct Command   *cmdlisthead = NULL;
+static struct Command  **cmdlist = &cmdlisthead;
+static struct Action   **curractionlist = NULL;
+static struct Argument **currarglist = NULL;
 
 #define WHITESPACE " \t\r\n"
 
-struct Test* parse_test_definitions(FILE *file)
+struct Command* parse_test_definitions(FILE *file)
 {
 	char keyword[32] = { 0 };
 
 	while (read_keyword(file, keyword, sizeof keyword)) {
-		if (!strcmp(keyword, "test")) {
-			ct_test(file);
-		} else {
-			printf("%s(): Unkown keyword on line %zu: '%s'\n", __func__, line, keyword);
-			exit(1);
-		}
+		parse_command(file, keyword);
 		memset(keyword, 0, sizeof keyword);
 	}
 
-	return testlisthead;
+	return cmdlisthead;
 }
 
 void print_test_definitions(enum TestPrintStyle style)
@@ -100,7 +95,7 @@ void print_test_definitions(enum TestPrintStyle style)
 	}
 }
 
-void free_testlist(void)
+void free_cmdlist(void)
 {
 	free_all();
 }
@@ -109,16 +104,16 @@ void free_testlist(void)
 
 static void dumpall(void)
 {
-	struct Test         *test;
-	struct TestCommand  *cmd;
-	struct TestArgument *arg;
-	int                  count = 0;
+	struct Command  *cmd;
+	struct Action   *action;
+	struct Argument *arg;
+	int              count = 0;
 
-	for (test = testlisthead; test; test = test->next) {
-		printf("Test %02d: '%s'\n", ++count, test->descr);
-		for (cmd = test->cmdlist; cmd; cmd = cmd->next) {
-			printf(" +-'%s'\n", cmd->cmdname);
-			for (arg = cmd->arglist; arg; arg = arg->next) {
+	for (cmd = cmdlisthead; cmd; cmd = cmd->next) {
+		printf("Test %02d: '%s'\n", ++count, cmd->descr);
+		for (action = cmd->actionlist; action; action = action->next) {
+			printf(" +-'%s'\n", action->actname);
+			for (arg = action->arglist; arg; arg = arg->next) {
 				if (arg->argvalue && *arg->argvalue)
 					printf("  +-'%s':'%s'\n", arg->argname, arg->argvalue);
 				else
@@ -131,26 +126,26 @@ static void dumpall(void)
 
 static void prettyprint(void)
 {
-	struct Test         *test;
-	struct TestCommand  *cmd;
-	struct TestArgument *arg;
-	int                  count = 0;
+	struct Command  *cmd;
+	struct Action   *action;
+	struct Argument *arg;
+	int              count = 0;
 
 	puts("\n# Test definitions:\n");
-	for (test = testlisthead; test; test = test->next) {
+	for (cmd = cmdlisthead; cmd; cmd = cmd->next) {
 		printf("# Test %02d:\n", ++count);
-		printf("test (%s) {\n", test->descr);
-		for (cmd = test->cmdlist; cmd; cmd = cmd->next) {
-			printf("\t%-13s { ", cmd->cmdname);
-			for (arg = cmd->arglist; arg; arg = arg->next) {
-				if (arg != cmd->arglist)
+		printf("test (%s) {\n", cmd->descr);
+		for (action = cmd->actionlist; action; action = action->next) {
+			printf("\t%-13s { ", action->actname);
+			for (arg = action->arglist; arg; arg = arg->next) {
+				if (arg != action->arglist)
 					printf(", ");
 				if (arg->argvalue && *arg->argvalue)
 					printf("%s: %s", arg->argname, arg->argvalue);
 				else
 					printf("%s", arg->argname);
 			}
-			if (cmd->arglist)
+			if (action->arglist)
 				puts(" }");
 			else
 				puts("}");
@@ -186,28 +181,28 @@ static void add_argument(const char *argname, const char *argvalue)
 }
 
 
-static void add_command(const char *cmdname, int len)
+static void add_action(const char *actname, int len)
 {
-	if (!currcmdlist) {
-		fprintf(stderr, "%s(): there is no current command list! (%s)\n", __func__, cmdname);
+	if (!curractionlist) {
+		fprintf(stderr, "%s(): there is no current action list! (%s)\n", __func__, actname);
 		exit(1);
 	}
 
-	*currcmdlist = allocate(sizeof **currcmdlist, true);
+	*curractionlist = allocate(sizeof **curractionlist, true);
 
-	(*currcmdlist)->cmdname = allocate(len + 1, false);
-	strcpy((*currcmdlist)->cmdname, cmdname);
+	(*curractionlist)->actname = allocate(len + 1, false);
+	strcpy((*curractionlist)->actname, actname);
 
-	currarglist = &(*currcmdlist)->arglist;
-	currcmdlist = &(*currcmdlist)->next;
+	currarglist = &(*curractionlist)->arglist;
+	curractionlist = &(*curractionlist)->next;
 
 
 }
 
-static void command_done(void)
+static void action_done(void)
 {
-	if (!currcmdlist) {
-		fprintf(stderr, "%s(): there is no current command list to finalize!\n", __func__);
+	if (!curractionlist) {
+		fprintf(stderr, "%s(): there is no current action list to finalize!\n", __func__);
 		exit(1);
 	}
 
@@ -215,41 +210,47 @@ static void command_done(void)
 }
 
 
-static void add_test(const char *descr, int len)
+static void add_command(const char *descr, int len, const char *cmdname)
 {
-	if (currcmdlist) {
-		fprintf(stderr, "%s(): there's already an unfinalized test! (%s)\n", __func__, descr);
+	if (curractionlist) {
+		fprintf(stderr, "%s(): there's already an unfinalized command! (%s)\n", __func__, descr);
 		exit(1);
 	}
 
-	*testlist = allocate(sizeof **testlist, true);
+	*cmdlist = allocate(sizeof **cmdlist, true);
 
-	(*testlist)->descr = allocate(len + 1, false);
-	strcpy((*testlist)->descr, descr);
-
-	currcmdlist = &(*testlist)->cmdlist;
-	testlist = &(*testlist)->next;
-}
-
-static void test_done(void)
-{
-	if (!currcmdlist) {
-		fprintf(stderr, "%s(): there is no current test to finalize!\n", __func__);
+	(*cmdlist)->descr = allocate(len + 1, false);
+	strcpy((*cmdlist)->descr, descr);
+	if (!strcmp(cmdname, "test")) {
+		(*cmdlist)->type = COMMAND_TEST;
+	} else {
+		fprintf(stderr, "%s(): Unknown command '%s' on line %zu\n", __func__, cmdname, line);
 		exit(1);
 	}
-	currcmdlist = NULL;
+
+	curractionlist = &(*cmdlist)->actionlist;
+	cmdlist = &(*cmdlist)->next;
+}
+
+static void command_done(void)
+{
+	if (!curractionlist) {
+		fprintf(stderr, "%s(): there is no current command to finalize!\n", __func__);
+		exit(1);
+	}
+	curractionlist = NULL;
 }
 
 
 
-static void ct_test(FILE *file)
+static void parse_command(FILE *file, const char *cmdname)
 {
 	int   c;
 	int   descr_len = 0;
 	char  descr[112] = { 0 };
-	bool  has_descr = false, has_cmdlist = false;
+	bool  has_descr = false, has_actionlist = false;
 
-	/* Keyword 'test' has been read, we now expect an optional description in parentheses,
+	/* A command keyword has been read, we now expect an optional description in parentheses,
 	 * an opening brace '{' followed by a command list (which may be empty), and after the
 	 * command list a closing brace '}'.
 	 * We ignore white space and comments.
@@ -257,7 +258,7 @@ static void ct_test(FILE *file)
 
 	while (EOF != (c = read_char(file))) {
 		if ('}' == c) {
-			if (!has_cmdlist) {
+			if (!has_actionlist) {
 				fprintf(stderr, "%s(): unexpected closing brace on line %zu, pos %zu\n", __func__, line, pos);
 				exit(1);
 			}
@@ -273,7 +274,7 @@ static void ct_test(FILE *file)
 
 		if ('(' == c) {
 			if (has_descr) {
-				fprintf(stderr, "%s(): test already has description '%s' (line %zu, pos %zu)\n", __func__, descr, line, pos);
+				fprintf(stderr, "%s(): command already has description '%s' (line %zu, pos %zu)\n", __func__, descr, line, pos);
 				exit(1);
 			}
 			descr_len = read_text(.file = file, .buffer = descr, .size = sizeof descr,
@@ -284,13 +285,13 @@ static void ct_test(FILE *file)
 		}
 
 		if ('{' == c) {
-			if (has_cmdlist) {
-				fprintf(stderr, "%s(): cannot have nested tests, line %zu, pos %zu\n", __func__, line, pos);
+			if (has_actionlist) {
+				fprintf(stderr, "%s(): cannot have nested commands, line %zu, pos %zu\n", __func__, line, pos);
 				exit(1);
 			}
-			add_test(descr, descr_len);
-			test_commandlist(file);
-			has_cmdlist = true;
+			add_command(descr, descr_len, cmdname);
+			parse_actionlist(file);
+			has_actionlist = true;
 			continue;
 		}
 		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu\n", __func__, c, line, pos);
@@ -298,25 +299,25 @@ static void ct_test(FILE *file)
 	}
 	if (EOF == c) {
 		if (feof(file))
-			fprintf(stderr, "%s(): EOF while reading test '%s'\n", __func__, descr);
+			fprintf(stderr, "%s(): EOF while reading command '%s'\n", __func__, descr);
 		else
 			perror(__func__);
 		exit(1);
 	}
 
-	test_done();
+	command_done();
 }
 
 
-static void test_commandlist(FILE *file)
+static void parse_actionlist(FILE *file)
 {
 	int  c;
-	char command[48] = { 0 };
+	char actname[48] = { 0 };
 	int  len;
 
-	/* We are inside the braces '{...}' of a 'test'. We expect a list of commands or a closing
-	 * brace '}' which ends the command list.
-	 * For every command keyword we encounter, call test_command().
+	/* We are inside the braces '{...}' of a command. We expect a list of actions or a closing
+	 * brace '}' which ends the action list.
+	 * For every action keyword we encounter, call parse_action().
 	 * Ignore spaces and comments.
 	 */
 
@@ -336,21 +337,21 @@ static void test_commandlist(FILE *file)
 
 		unread_char(file, c);
 
-		len = read_keyword(file, command, sizeof command);
+		len = read_keyword(file, actname, sizeof actname);
 		if (len == 0) {
-			fprintf(stderr, "%s(): Panic, empty command name around line %zu, pos %zu\n", __func__, line, pos);
+			fprintf(stderr, "%s(): Panic, empty action name around line %zu, pos %zu\n", __func__, line, pos);
 			exit(1);
 		}
-		add_command(command, len);
-		test_command(file, command);
-		command_done();
+		add_action(actname, len);
+		parse_action(file, actname);
+		action_done();
 	}
 
 
 }
 
 
-static void test_command(FILE *file, const char *cmdname)
+static void parse_action(FILE *file, const char *actname)
 {
 	int  c;
 
@@ -363,11 +364,11 @@ static void test_command(FILE *file, const char *cmdname)
 		}
 
 		if ('{' == c) {
-			test_command_args(file);
+			parse_action_args(file);
 			return;
 		}
 
-		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu, expected command arguments\n", __func__, c, line, pos);
+		fprintf(stderr, "%s(): Invalid char '%c' on line %zu, pos %zu, expected action arguments\n", __func__, c, line, pos);
 		exit(1);
 	}
 
@@ -375,13 +376,13 @@ static void test_command(FILE *file, const char *cmdname)
 		if (!feof(file))
 			perror(__func__);
 		else
-			fprintf(stderr, "%s(): EOF while reading commad '%s'\n", __func__, cmdname);
+			fprintf(stderr, "%s(): EOF while reading action '%s'\n", __func__, actname);
 		exit(1);
 	}
 }
 
 
-static void test_command_args(FILE *file)
+static void parse_action_args(FILE *file)
 {
 	int    c;
 	char   arg[48] = { 0 }, val[48] = { 0 };

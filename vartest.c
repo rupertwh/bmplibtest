@@ -38,20 +38,20 @@
 
 const unsigned char checkmark[] = {0x20, 0xE2, 0x9C, 0x93, 0};
 
-static bool perform(struct TestCommand *cmd);
-static bool perform_loadraw(struct TestArgument *args);
-static bool perform_loadbmp(struct TestArgument *args);
-static bool perform_loadpng(struct TestArgument *args);
-static bool perform_savebmp(struct TestArgument *args);
+static bool perform(struct Action *action);
+static bool perform_loadraw(struct Argument *args);
+static bool perform_loadbmp(struct Argument *args);
+static bool perform_loadpng(struct Argument *args);
+static bool perform_savebmp(struct Argument *args);
 static bool perform_swap(void);
 static bool perform_duplicate(void);
-static bool perform_compare(struct TestArgument *args);
-static bool perform_rawcompare(struct TestArgument *args);
+static bool perform_compare(struct Argument *args);
+static bool perform_rawcompare(struct Argument *args);
 static bool perform_delete(void);
-static bool perform_convertgamma(struct TestArgument *args);
+static bool perform_convertgamma(struct Argument *args);
 static bool perform_flatten(void);
-static bool perform_exposure(struct TestArgument *args);
-static bool perform_convertformat(struct TestArgument *args);
+static bool perform_exposure(struct Argument *args);
+static bool perform_convertformat(struct Argument *args);
 static bool perform_invertpalette(void);
 static void convert_format(BMPFORMAT format, int bits);
 static void set_exposure(double fstops);
@@ -62,7 +62,7 @@ static inline uint16_t float_to_s2_13(double d);
 static inline double s2_13_to_double(uint16_t s2_13);
 bool bmpresult_from_str(const char *str, BMPRESULT *res);
 bool rendering_intent_from_str(const char *str, BMPINTENT *intent);
-
+static bool run_test(struct Command *cmd, int testnum);
 
 static struct Conf *conf;
 static FILE        *rawfile = NULL;
@@ -73,8 +73,8 @@ int main(int argc, char *argv[])
 	int  testnum = 0;
 	int  bad = 0, good = 0;
 	bool only_selected_tests;
-	struct Test *testlist;
-	FILE        *file;
+	struct Command *cmdlist;
+	FILE           *file;
 
 	if (!(conf = conf_parse_cmdline(argc, argv))) {
 		printf("try -? or --help\n");
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	testlist = parse_test_definitions(file);
+	cmdlist = parse_test_definitions(file);
 	fclose(file);
 
 	if (conf->pretty) {
@@ -122,66 +122,44 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	for (struct Test *test = testlist; test; test = test->next) {
+	for (struct Command *cmd = cmdlist; cmd; cmd = cmd->next) {
 
-		testnum++;
+		if (cmd->type == COMMAND_TEST) {
 
-		/* if test numbers have been given on command line, skip all other tests */
-		if (only_selected_tests) {
-			bool  found = false;
-			char *endptr;
-			for (struct Confstr **str = &conf->strlist; *str; str = &(*str)->next) {
-				if (*(*str)->str && testnum == strtol((*str)->str, &endptr, 10)) {
-					if (endptr && *endptr != '\0')
-						continue;
-					*str = (*str)->next;
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-				continue;
-		}
+			testnum++;
 
-		imgstack_clear();
-
-		if (conf->verbose > 0) {
-			printf("\n===== Test %02d: %s\n", testnum, test->descr);
-		}
-
-
-		bool failed = false;
-		for (struct TestCommand *command = test->cmdlist; command; command = command->next) {
-
-			if (conf->verbose > 1) {
-				printf("--'%s'\n", command->cmdname);
-				if (conf->verbose > 2) {
-					for (struct TestArgument *arg = command->arglist; arg; arg = arg->next) {
-						if (arg->argvalue && *arg->argvalue)
-							printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
-						else
-							printf(" +--'%s'\n", arg->argname);
+			/* if test numbers have been given on command line, skip all other tests */
+			if (only_selected_tests) {
+				bool  found = false;
+				char *endptr;
+				for (struct Confstr **str = &conf->strlist; *str; str = &(*str)->next) {
+					if (*(*str)->str && testnum == strtol((*str)->str, &endptr, 10)) {
+						if (endptr && *endptr != '\0')
+							continue;
+						*str = (*str)->next;
+						found = true;
+						break;
 					}
 				}
+				if (!found)
+					continue;
 			}
-			if (!perform(command)) {
-				failed = true;
-				break;
+
+			bool failed = run_test(cmd, testnum);
+			if (failed) {
+				bad++;
+				if (conf->verbose > 0)
+					printf("****failed\n");
+			} else {
+				good++;
+				if (conf->verbose > 0)
+					printf("passed%s\n", checkmark);
 			}
 		}
 
-		if (failed) {
-			bad++;
-			if (conf->verbose > 0)
-				printf("****failed\n");
-		} else {
-			good++;
-			if (conf->verbose > 0)
-				printf("passed%s\n", checkmark);
-		}
 	}
 
-	free_testlist();
+	free_cmdlist();
 
 	if (rawfile) {
 		fclose(rawfile);
@@ -204,40 +182,73 @@ int main(int argc, char *argv[])
 }
 
 
-static bool perform(struct TestCommand *cmd)
+static bool run_test(struct Command *cmd, int testnum)
 {
-	if (!strcmp("loadbmp", cmd->cmdname))
-		return perform_loadbmp(cmd->arglist);
-	else if (!strcmp("loadraw", cmd->cmdname))
-		return perform_loadraw(cmd->arglist);
-	else if (!strcmp("loadpng", cmd->cmdname))
-		return perform_loadpng(cmd->arglist);
-	else if (!strcmp("savebmp", cmd->cmdname))
-		return perform_savebmp(cmd->arglist);
-	else if (!strcmp("swap", cmd->cmdname))
+	bool failed = false;
+
+	imgstack_clear();
+
+	if (conf->verbose > 0) {
+		printf("\n===== Test %02d: %s\n", testnum, cmd->descr);
+	}
+
+	for (struct Action *action = cmd->actionlist; action; action = action->next) {
+
+		if (conf->verbose > 1) {
+			printf("--'%s'\n", action->actname);
+			if (conf->verbose > 2) {
+				for (struct Argument *arg = action->arglist; arg; arg = arg->next) {
+					if (arg->argvalue && *arg->argvalue)
+						printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
+					else
+						printf(" +--'%s'\n", arg->argname);
+				}
+			}
+		}
+		if (!perform(action)) {
+			failed = true;
+			break;
+		}
+	}
+
+	return failed;
+}
+
+
+static bool perform(struct Action *action)
+{
+	if (!strcmp("loadbmp", action->actname))
+		return perform_loadbmp(action->arglist);
+	else if (!strcmp("loadraw", action->actname))
+		return perform_loadraw(action->arglist);
+	else if (!strcmp("loadpng", action->actname))
+		return perform_loadpng(action->arglist);
+	else if (!strcmp("savebmp", action->actname))
+		return perform_savebmp(action->arglist);
+	else if (!strcmp("swap", action->actname))
 		return perform_swap();
-	else if (!strcmp("duplicate", cmd->cmdname))
+	else if (!strcmp("duplicate", action->actname))
 		return perform_duplicate();
-	else if (!strcmp("compare", cmd->cmdname))
-		return perform_compare(cmd->arglist);
-	else if (!strcmp("rawcompare", cmd->cmdname))
-		return perform_rawcompare(cmd->arglist);
-	else if (!strcmp("delete", cmd->cmdname))
+	else if (!strcmp("compare", action->actname))
+		return perform_compare(action->arglist);
+	else if (!strcmp("rawcompare", action->actname))
+		return perform_rawcompare(action->arglist);
+	else if (!strcmp("delete", action->actname))
 		return perform_delete();
-	else if (!strcmp("addalpha", cmd->cmdname))
+	else if (!strcmp("addalpha", action->actname))
 		return perform_addalpha();
-	else if (!strcmp("convertgamma", cmd->cmdname))
-		return perform_convertgamma(cmd->arglist);
-	else if (!strcmp("convertformat", cmd->cmdname))
-		return perform_convertformat(cmd->arglist);
-	else if (!strcmp("invertpalette", cmd->cmdname))
+	else if (!strcmp("convertgamma", action->actname))
+		return perform_convertgamma(action->arglist);
+	else if (!strcmp("convertformat", action->actname))
+		return perform_convertformat(action->arglist);
+	else if (!strcmp("invertpalette", action->actname))
 		return perform_invertpalette();
-	else if (!strcmp("flatten", cmd->cmdname))
+	else if (!strcmp("flatten", action->actname))
 		return perform_flatten();
-	else if (!strcmp("exposure", cmd->cmdname))
-		return perform_exposure(cmd->arglist);
+	else if (!strcmp("exposure", action->actname))
+		return perform_exposure(action->arglist);
 	else
-		printf("Unkown command: %s\n", cmd->cmdname);
+		printf("Unkown command: %s\n", action->actname);
 
 	return false;
 }
@@ -257,7 +268,7 @@ static bool loadraw(const char *filespec)
 	return true;
 }
 
-static bool perform_loadraw(struct TestArgument *args)
+static bool perform_loadraw(struct Argument *args)
 {
 	const char    *dir = NULL, *fname = NULL;
 	const char    *dirpath;
@@ -302,7 +313,7 @@ static bool perform_loadraw(struct TestArgument *args)
 
 
 
-static bool perform_loadbmp(struct TestArgument *args)
+static bool perform_loadbmp(struct Argument *args)
 {
 	bool           success = false;
 	const char    *dir = NULL, *fname = NULL;
@@ -592,7 +603,7 @@ abort:
 }
 
 
-static bool perform_savebmp(struct TestArgument *args)
+static bool perform_savebmp(struct Argument *args)
 {
 	const char   *fname = NULL;
 	const char   *dirpath;
@@ -916,7 +927,7 @@ static int hexval(const char *str)
 	return hex;
 }
 
-static bool perform_rawcompare(struct TestArgument *args)
+static bool perform_rawcompare(struct Argument *args)
 {
 	const int    maxbytes = 100;
 	const char  *offsetstr = NULL, *sizestr = NULL, *hexstr = NULL;
@@ -1182,7 +1193,7 @@ static bool perform_flatten(void)
 }
 
 
-static bool perform_exposure(struct TestArgument *args)
+static bool perform_exposure(struct Argument *args)
 {
 	char   *opt, *optval;
 	double  fstops = 0.0;
@@ -1210,7 +1221,7 @@ static bool perform_exposure(struct TestArgument *args)
 static void convert_srgb_to_linear(void);
 static void convert_linear_to_srgb(void);
 
-static bool perform_convertgamma(struct TestArgument *args)
+static bool perform_convertgamma(struct Argument *args)
 {
 	const char   *from = NULL, *to = NULL;
 
@@ -1421,7 +1432,7 @@ static void set_exposure(double fstops)
 }
 
 
-static bool perform_convertformat(struct TestArgument *args)
+static bool perform_convertformat(struct Argument *args)
 {
 	const char *to = NULL;
 	int         bits = 0;
@@ -1584,7 +1595,7 @@ static bool perform_delete(void)
 }
 
 
-static bool perform_compare(struct TestArgument *args)
+static bool perform_compare(struct Argument *args)
 {
 	int           i, fuzz = 0;
 	size_t        off, size;
@@ -1668,7 +1679,7 @@ static bool perform_compare(struct TestArgument *args)
 }
 
 
-static bool perform_loadpng(struct TestArgument *args)
+static bool perform_loadpng(struct Argument *args)
 {
 	const char   *dir = NULL, *fname = NULL;
 	const char   *dirpath;
