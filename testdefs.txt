@@ -19,157 +19,157 @@
 
 
 test ( Load 1-bit indexed bl/grn ) {
-    loadbmp {sample, g/pal1bg.bmp}
+    loadbmp {bmpsuite, g/pal1bg.bmp}
     loadpng {ref, ref_8bit_2bg.png}
     compare { }
 }
 
 test (Load 1-bit indexed b/w) {
-    loadbmp {sample, g/pal1.bmp}
+    loadbmp {bmpsuite, g/pal1.bmp}
     loadpng {ref, ref_8bit_2bw.png}
     compare { }
 }
 
 test (Load 1-bit indexed w/b) {
-    loadbmp {sample, g/pal1wb.bmp}
+    loadbmp {bmpsuite, g/pal1wb.bmp}
     loadpng {ref, ref_8bit_2bw.png}
     compare { }
 }
 
 test (Load 4-bit indexed) {
-    loadbmp {sample, g/pal4.bmp}
+    loadbmp {bmpsuite, g/pal4.bmp}
     loadpng {ref, ref_8bit_12c.png}
     compare { }
 }
 
 test (Load 4-bit indexed gs) {
-    loadbmp {sample, g/pal4gs.bmp}
+    loadbmp {bmpsuite, g/pal4gs.bmp}
     loadpng {ref, ref_8bit_12gs.png}
     compare { }
 }
 
 test (Load 4-bit RLE) {
-    loadbmp {sample, g/pal4rle.bmp}
+    loadbmp {bmpsuite, g/pal4rle.bmp}
     loadpng {ref, ref_8bit_12c_alpha.png}
     compare { }
 }
 
 test (Load 8-bit indexed all zero) {
-    loadbmp {sample, g/pal8-0.bmp}
+    loadbmp {bmpsuite, g/pal8-0.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed) {
-    loadbmp {sample, g/pal8.bmp}
+    loadbmp {bmpsuite, g/pal8.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed gs) {
-    loadbmp {sample, g/pal8gs.bmp}
+    loadbmp {bmpsuite, g/pal8gs.bmp}
     loadpng {ref, ref_8bit_252gs.png}
     compare { }
 }
 
 test (Load 8-bit indexed nonsquare) {
-    loadbmp {sample, g/pal8nonsquare.bmp}
+    loadbmp {bmpsuite, g/pal8nonsquare.bmp}
     loadpng {ref, ref_8bit_252c_nonsquare.png}
     compare { }
 }
 
 test (Load 8-bit indexed OS/2) {
-    loadbmp {sample, g/pal8os2.bmp}
+    loadbmp {bmpsuite, g/pal8os2.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed OS/2 v2 16) {
-    loadbmp {sample, q/pal8os2v2-16.bmp}
+    loadbmp {bmpsuite, q/pal8os2v2-16.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed OS/2 v2 40) {
-    loadbmp {sample, q/pal8os2v2-40sz.bmp}
+    loadbmp {bmpsuite, q/pal8os2v2-40sz.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed OS/2 v2-sz) {
-    loadbmp {sample, q/pal8os2v2-sz.bmp}
+    loadbmp {bmpsuite, q/pal8os2v2-sz.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit RLE) {
-    loadbmp {sample, g/pal8rle.bmp}
+    loadbmp {bmpsuite, g/pal8rle.bmp}
     loadpng {ref, ref_8bit_252c_alpha.png}
     compare { }
 }
 
 test (Load 8-bit indexed topdown) {
-    loadbmp {sample, g/pal8topdown.bmp}
+    loadbmp {bmpsuite, g/pal8topdown.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed V4) {
-    loadbmp {sample, g/pal8v4.bmp}
+    loadbmp {bmpsuite, g/pal8v4.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed V5) {
-    loadbmp {sample, g/pal8v5.bmp}
+    loadbmp {bmpsuite, g/pal8v5.bmp}
     loadpng {ref, ref_8bit_252c.png}
     compare { }
 }
 
 test (Load 8-bit indexed w124) {
-    loadbmp {sample, g/pal8w124.bmp}
+    loadbmp {bmpsuite, g/pal8w124.bmp}
     loadpng {ref, ref_8bit_252c_w124.png}
     compare { }
 }
 
 test (Load 8-bit indexed w125) {
-    loadbmp {sample, g/pal8w125.bmp}
+    loadbmp {bmpsuite, g/pal8w125.bmp}
     loadpng {ref, ref_8bit_252c_w125.png}
     compare { }
 }
 
 test (Load 8-bit indexed w126) {
-    loadbmp {sample, g/pal8w126.bmp}
+    loadbmp {bmpsuite, g/pal8w126.bmp}
     loadpng {ref, ref_8bit_252c_w126.png}
     compare { }
 }
 
 test (Load 16-bit RGB 565) {
-    loadbmp {sample, g/rgb16-565.bmp}
+    loadbmp {bmpsuite, g/rgb16-565.bmp}
     loadpng {ref, ref_8bit_rgb16-565.png}
     compare { }
 }
 
 test (Load 16-bit RGB 565 + color table) {
-    loadbmp {sample, g/rgb16-565pal.bmp}
+    loadbmp {bmpsuite, g/rgb16-565pal.bmp}
     loadpng {ref, ref_8bit_rgb16-565.png}
     compare { }
 }
 
 test (Load 16-bit RGB 565 BITFIELDS) {
-    loadbmp {sample, g/rgb16bfdef.bmp}
+    loadbmp {bmpsuite, g/rgb16bfdef.bmp}
     loadpng {ref, ref_8bit_rgb16.png}
     compare { }
 }
 
 test (Load 16-bit RGB) {
-    loadbmp {sample, g/rgb16.bmp}
+    loadbmp {bmpsuite, g/rgb16.bmp}
     loadpng {ref, ref_8bit_rgb16.png}
     compare { }
 }
 
 test (Load 24-bit RGB + Save) {
-    loadbmp {sample, g/rgb24.bmp}
+    loadbmp {bmpsuite, g/rgb24.bmp}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
     savebmp {rgb24out.bmp, loadraw }
@@ -179,7 +179,7 @@ test (Load 24-bit RGB + Save) {
 }
 
 test (Load 24-bit RGB line-by-line + Save) {
-    loadbmp {sample, g/rgb24.bmp, line: line}
+    loadbmp {bmpsuite, g/rgb24.bmp, line: line}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
     savebmp {rgb24out-line.bmp, line: line, loadraw }
@@ -189,63 +189,63 @@ test (Load 24-bit RGB line-by-line + Save) {
 }
 
 test (Load and save 8-bit RLE line-by-line) {
-    loadbmp {sample, g/pal8rle.bmp, line: line, rgb: index, undef: leave}
+    loadbmp {bmpsuite, g/pal8rle.bmp, line: line, rgb: index, undef: leave}
     savebmp {pal8-rle-line.bmp, rle: auto, line: line}
     loadbmp {tmp, pal8-rle-line.bmp, rgb: index, undef: leave}
     compare { }
 }
 
 test (Load 24-bit RGB + color table) {
-    loadbmp {sample, g/rgb24pal.bmp}
+    loadbmp {bmpsuite, g/rgb24pal.bmp}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
 }
 
 test (Load 32-bit BITFIELDS unusual order) {
-    loadbmp {sample, g/rgb32bf.bmp}
+    loadbmp {bmpsuite, g/rgb32bf.bmp}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
 }
 
 test (Load 32-bit BITFIELDS) {
-    loadbmp {sample, g/rgb32bfdef.bmp}
+    loadbmp {bmpsuite, g/rgb32bfdef.bmp}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
 }
 
 test (Load 32-bit RGB) {
-    loadbmp {sample, g/rgb32.bmp}
+    loadbmp {bmpsuite, g/rgb32.bmp}
     loadpng {ref, ref_8bit_255c.png}
     compare { }
 }
 
 test (Load Huffman) {
-    loadbmp {sample, q/pal1huffmsb.bmp}
+    loadbmp {bmpsuite, q/pal1huffmsb.bmp}
     loadpng {ref, ref_8bit_2bw.png}
     compare { }
 }
 
 test (Load Huffman - explicit t4black=1) {
-    loadbmp {sample, q/pal1huffmsb.bmp, huff-t4black: 1}
+    loadbmp {bmpsuite, q/pal1huffmsb.bmp, huff-t4black: 1}
     loadpng {ref, ref_8bit_2bw.png}
     compare { }
 }
 
 test (Load Huffman - explicit t4black=0) {
-    loadbmp {sample, q/pal1huffmsb.bmp, huff-t4black: 0}
+    loadbmp {bmpsuite, q/pal1huffmsb.bmp, huff-t4black: 0}
     loadpng {ref, ref_8bit_2bw-neg.png}
     compare { }
 }
 
 test (Load Huffman as float) {
-    loadbmp       {sample, q/pal1huffmsb.bmp, format: float}
+    loadbmp       {bmpsuite, q/pal1huffmsb.bmp, format: float}
     convertformat {int, 8}
     loadpng       {ref, ref_8bit_2bw.png}
     compare       { }
 }
 
 test (Load RLE24) {
-    loadbmp {sample, q/rgb24rle24.bmp, undef: leave}
+    loadbmp {bmpsuite, q/rgb24rle24.bmp, undef: leave}
     savebmp {rle24.bmp, loadraw}
     # header size
     rawcompare {14, 4, 28000000  }
@@ -255,13 +255,13 @@ test (Load RLE24) {
 }
 
 test (Load 64-bit) {
-    loadbmp       {sample, q/rgba64.bmp, format: float}
+    loadbmp       {bmpsuite, q/rgba64.bmp, format: float}
     convertformat {int, 8}
     savebmp       {rgba64_to_16bit.bmp}
 }
 
 test (Save 32-bit RGB - load as float) {
-    loadbmp {sample, g/rgb32.bmp, format: float}
+    loadbmp {bmpsuite, g/rgb32.bmp, format: float}
     savebmp {rgb32.bmp}
     delete  { }
     loadbmp {tmp, rgb32.bmp}
@@ -270,35 +270,35 @@ test (Save 32-bit RGB - load as float) {
 }
 
 test (Save 64-bit RGB) {
-    loadbmp      {sample, g/rgb32.bmp}
+    loadbmp      {bmpsuite, g/rgb32.bmp}
     convertgamma {srgb, linear}
     savebmp      {rgb64.bmp, 64bit: yes}
 }
 
 test (Save 32-bit RGB) {
-    loadbmp {sample, g/rgb32.bmp, format: float}
+    loadbmp {bmpsuite, g/rgb32.bmp, format: float}
     savebmp {rgb32_16.bmp, format: int, bufferbits: 16, outbits: r10g10b10a0 }
 }
 
 test (Load 64-bit RGB) {
-    loadbmp {sample, q/rgba64.bmp}
+    loadbmp {bmpsuite, q/rgba64.bmp}
     savebmp {rgb64-to-24.bmp, format: int, bufferbits: 8}
 }
 
 test (Load 64-bit RGB float linear + convert) {
-    loadbmp      {sample, q/rgba64.bmp, format: float, conv64: linear}
+    loadbmp      {bmpsuite, q/rgba64.bmp, format: float, conv64: linear}
     convertgamma {linear, srgb}
     savebmp      {rgb64fltlin-to-24.bmp, format: int, bufferbits: 8}
 }
 
 test (Load 64-bit RGB s2.13 linear + convert) {
-    loadbmp      {sample, q/rgba64.bmp, format: s2.13, conv64: linear}
+    loadbmp      {bmpsuite, q/rgba64.bmp, format: s2.13, conv64: linear}
     convertgamma {linear, srgb}
     savebmp      {rgb64s2.13lin-to-24.bmp, format: int, bufferbits: 8}
 }
 
 test (Load 64-bit RGB s2.13) {
-    loadbmp {sample, q/rgba64.bmp, format: s2.13, conv64: srgb}
+    loadbmp {bmpsuite, q/rgba64.bmp, format: s2.13, conv64: srgb}
     savebmp {rgb64s2.13lin-to-24.bmp, format: int, bufferbits: 8}
 
     #
@@ -310,7 +310,7 @@ test (Test HDR 64-bit) {
     #
     # Load PNG and save as 64bit BMP with exposure +2
     #
-    loadpng       {ref, almdudler.png}
+    loadpng       {sample, almdudler.png}
     convertformat {float, 0}
     convertgamma  {srgb, linear}
     exposure      {fstops: 2}
@@ -337,7 +337,7 @@ test (Test HDR 64-bit) {
 }
 
 test (create dark 16-bit) {
-    loadpng       {ref, almdudler.png}
+    loadpng       {sample, almdudler.png}
     convertformat {float, 0}
     convertgamma  {srgb, linear}
     exposure      {fstops: -8}
@@ -347,83 +347,83 @@ test (create dark 16-bit) {
 }
 
 test (Save big Huffman) {
-    loadbmp {ref, sw-big.bmp, rgb: index}
+    loadbmp {sample, sw-big.bmp, rgb: index}
     savebmp {sw-huffout.bmp, rle: auto, allow: huff, loadraw}
     # header size = 64
     rawcompare {14, 4, 40000000  }
 }
 
 test (Save big Huffman as RGB) {
-    loadbmp {ref, sw-big.bmp, rgb: index}
+    loadbmp {sample, sw-big.bmp, rgb: index}
     flatten { }
     savebmp {sw-huffoutrgb.bmp}
 }
 
 test (Save 8-bit RLE8) {
-    loadbmp {sample, g/pal8.bmp, rgb: index}
+    loadbmp {bmpsuite, g/pal8.bmp, rgb: index}
     savebmp {rle8.bmp, rle: auto}
     loadbmp {tmp, rle8.bmp, rgb: index}
     compare { }
 }
 
 test (Save 8-bit indexed) {
-    loadbmp {sample, g/pal8.bmp, rgb: index}
+    loadbmp {bmpsuite, g/pal8.bmp, rgb: index}
     savebmp {pal8.bmp, rle: none}
     loadbmp {tmp, pal8.bmp, rgb: index}
     compare { }
 }
 
 test (Save 4-bit RLE4) {
-    loadbmp {sample, g/pal4.bmp, rgb: index}
+    loadbmp {bmpsuite, g/pal4.bmp, rgb: index}
     savebmp {rle4.bmp, rle: auto}
     loadbmp {tmp, rle4.bmp, rgb: index}
     compare { }
 }
 
 test (Save 4-bit indexed) {
-    loadbmp {sample, g/pal4.bmp, rgb: index}
+    loadbmp {bmpsuite, g/pal4.bmp, rgb: index}
     savebmp {pal4.bmp, rle: none}
     loadbmp {tmp, pal4.bmp, rgb: index}
     compare { }
 }
 
 test (Save 8-bit RLE24) {
-    loadbmp {sample, g/rgb24.bmp}
+    loadbmp {bmpsuite, g/rgb24.bmp}
     savebmp {rle24.bmp, rle: auto, allow: rle24}
     loadbmp {tmp, rle24.bmp, undef: leave}
     compare { }
 }
 
 test (Save bigger 8-bit RLE24) {
-    loadbmp {ref, 90s.bmp}
+    loadbmp {sample, 90s.bmp}
     savebmp {90s_out.bmp, rle: auto, allow: rle24}
     loadbmp {tmp, 90s_out.bmp, undef: leave}
     compare { }
 }
 
 test (Save 24bit RGB) {
-    loadbmp {sample, g/rgb24.bmp}
+    loadbmp {bmpsuite, g/rgb24.bmp}
     savebmp {rgb24.bmp}
     loadbmp {tmp, rgb24.bmp}
     compare { }
 }
 
 test (Save 32bit RGB) {
-    loadbmp {sample, g/rgb32.bmp}
+    loadbmp {bmpsuite, g/rgb32.bmp}
     savebmp {rgb32.bmp}
     loadbmp {tmp, rgb32.bmp}
     compare { }
 }
 
 test (Save 16bit RGB) {
-    loadbmp {sample, g/rgb16.bmp}
+    loadbmp {bmpsuite, g/rgb16.bmp}
     savebmp {rgb16.bmp}
     loadbmp {tmp, rgb16.bmp}
     compare { }
 }
 
 test (Test Huffman compression - black on white) {
-    loadbmp {ref, text-bw.bmp, rgb:index}
+    loadbmp {sample, text-bw.bmp, rgb:index}
     savebmp {text-bw-huff.bmp, rle: auto, allow: huff}
     savebmp {text-bw_bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0}
     loadbmp {tmp, text-bw-huff.bmp, rgb: index}
@@ -433,7 +433,7 @@ test (Test Huffman compression - black on white) {
 }
 
 test (Test Huffman compression - t4-black=0) {
-    loadbmp {ref, text-bw.bmp, rgb:index, huff-t4black: 0}
+    loadbmp {sample, text-bw.bmp, rgb:index}
     savebmp {text-bw-t4-huff.bmp, rle: auto, allow: huff, huff-t4black: 0}
     savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
              huff-t4black: 0, loadraw }
@@ -448,37 +448,37 @@ test (Test Huffman compression - t4-black=0) {
 }
 
 test (Embedded JPEG) {
-    loadbmp      {sample, q/rgb24jpeg.bmp, expect: BMP_RESULT_JPEG}
+    loadbmp      {bmpsuite, q/rgb24jpeg.bmp, expect: BMP_RESULT_JPEG}
 }
 
 test (Embedded PNG) {
-    loadbmp      {sample, q/rgb24png.bmp, expect: BMP_RESULT_PNG}
+    loadbmp      {bmpsuite, q/rgb24png.bmp, expect: BMP_RESULT_PNG}
 }
 
 test (Really big) {
-    loadbmp      {sample, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
+    loadbmp      {bmpsuite, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
 }
 
 test (Bad planes) {
-    loadbmp      {sample, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
+    loadbmp      {bmpsuite, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
 }
 
 test (Truncated) {
-    loadbmp      {sample, b/shortfile.bmp, expect: BMP_RESULT_TRUNCATED}
+    loadbmp      {bmpsuite, b/shortfile.bmp, expect: BMP_RESULT_TRUNCATED}
 }
 
 test (Invalid pixels) {
-    loadbmp      {sample, b/pal8badindex.bmp, expect: BMP_RESULT_INVALID}
+    loadbmp      {bmpsuite, b/pal8badindex.bmp, expect: BMP_RESULT_INVALID}
 }
 
 test ( load ICC profile ) {
-    loadbmp   { sample, q/rgb24prof.bmp, iccprofile: loadonly }
+    loadbmp   { bmpsuite, q/rgb24prof.bmp, iccprofile: loadonly }
     loadpng   { ref, rgb24prof_ign.png }
     compare   { }
 }
 
 test ( write ICC profile ) {
-    loadbmp    { sample, q/rgb24prof.bmp, iccprofile: loadonly }
+    loadbmp    { bmpsuite, q/rgb24prof.bmp, iccprofile: loadonly }
     savebmp    { rgb24prof.bmp, iccprofile: embed }
     loadbmp    { tmp, rgb24prof.bmp, iccprofile: loadonly}
     savebmp    { rgb24prof2.bmp, iccprofile: embed, loadraw, intent: GRAPHICS }
@@ -488,7 +488,7 @@ test ( write ICC profile ) {
 }
 
 test ( write rendering intent w/o profile ) {
-    loadbmp    { sample, g/rgb24.bmp }
+    loadbmp    { bmpsuite, g/rgb24.bmp }
     savebmp    { intent.bmp, loadraw, intent: IMAGES }
     rawcompare { 122, 4, 04000000 }
 }

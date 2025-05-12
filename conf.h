@@ -25,6 +25,7 @@ struct Confstr {
 
 struct Conf {
 	int             verbose;
+	char           *bmpsuitedir;
 	char           *sampledir;
 	char           *refdir;
 	char           *tmpdir;

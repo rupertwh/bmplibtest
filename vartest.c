@@ -88,15 +88,17 @@ int main(int argc, char *argv[])
 
 	only_selected_tests = conf->strlist != NULL;
 
+	trim_trailing_slash(conf->bmpsuitedir);
 	trim_trailing_slash(conf->sampledir);
 	trim_trailing_slash(conf->refdir);
 	trim_trailing_slash(conf->tmpdir);
 
 	if (conf->verbose > 0) {
 		printf("test definitions: %s\n", conf->testfile);
-		printf("samples: %s\n", conf->sampledir);
-		printf("ref    : %s\n", conf->refdir);
-		printf("tmp    : %s\n", conf->tmpdir);
+		printf("BMP Suite: %s\n", conf->bmpsuitedir);
+		printf("samples  : %s\n", conf->sampledir);
+		printf("ref      : %s\n", conf->refdir);
+		printf("tmp      : %s\n", conf->tmpdir);
 	}
 
 	if (!conf->testfile) {
@@ -293,7 +295,9 @@ static bool perform_loadraw(struct Argument *args)
 		return false;
 	}
 
-	if (!strcmp(dir, "sample"))
+	if (!strcmp(dir, "bmpsuite"))
+		dirpath = conf->bmpsuitedir;
+	else if (!strcmp(dir, "sample"))
 		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
 		dirpath = conf->tmpdir;
@@ -354,7 +358,9 @@ static bool perform_loadbmp(struct Argument *args)
 		goto abort;
 	}
 
-	if (!strcmp(dir, "sample"))
+	if (!strcmp(dir, "bmpsuite"))
+		dirpath = conf->bmpsuitedir;
+	else if (!strcmp(dir, "sample"))
 		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
 		dirpath = conf->tmpdir;
@@ -1701,7 +1707,9 @@ static bool perform_loadpng(struct Argument *args)
 		goto abort;
 	}
 
-	if (!strcmp(dir, "sample"))
+	if (!strcmp(dir, "bmpsuite"))
+		dirpath = conf->bmpsuitedir;
+	else if (!strcmp(dir, "sample"))
 		dirpath = conf->sampledir;
 	else if (!strcmp(dir, "tmp"))
 		dirpath = conf->tmpdir;
