@@ -217,46 +217,48 @@ int main(int argc, char **argv)
 	memset(&fh, 0, sizeof fh);
 	memset(&ih, 0, sizeof ih);
 
-	if (argc != 2) {
+	if (argc < 2) {
 		printf("Usage: bmpinspect <bmp-file>\n");
 		return 1;
 	}
 
-	if (!(file = fopen(argv[1], "rb"))) {
-		perror(argv[1]);
-		return 1;
+	bool ret = true;
+	for (int i = 1; i < argc; i++) {
+		if (!(file = fopen(argv[i], "rb"))) {
+			perror(argv[i]);
+			return 1;
+		}
+
+		printf("\n--- %s ---\n", argv[i]);
+
+		if (!read_file_header(file, &fh))
+			goto abort;
+
+
+
+		switch (fh.type) {
+			case BMPFILE_BM:
+			case BMPFILE_IC:
+			case BMPFILE_PT:
+				ret = display_bitmap(file, &fh, 0, NULL) && ret;
+				break;
+
+			case BMPFILE_BA:
+				ret = display_bitmap_array(file, &fh) && ret;
+				break;
+
+			case BMPFILE_CI:
+			case BMPFILE_CP:
+				ret = display_cicp(file, &fh, 0, NULL) && ret;
+				break;
+			default:
+				printf("Invalid signature: 0x%04x\n", fh.type);
+				ret = false;
+				break;
+		}
+		fclose(file);
+		file = NULL;
 	}
-
-	printf("\n--- %s ---\n", argv[1]);
-
-	if (!read_file_header(file, &fh))
-		goto abort;
-
-	bool ret = false;
-
-	switch (fh.type) {
-		case BMPFILE_BM:
-		case BMPFILE_IC:
-		case BMPFILE_PT:
-			ret = display_bitmap(file, &fh, 0, NULL);
-			break;
-
-		case BMPFILE_BA:
-			ret = display_bitmap_array(file, &fh);
-			break;
-
-		case BMPFILE_CI:
-		case BMPFILE_CP:
-			ret = display_cicp(file, &fh, 0, NULL);
-			break;
-		default:
-			printf("Invalid signature: 0x%04x\n", fh.type);
-			break;
-	}
-
-	fclose(file);
-	file = NULL;
-
 	return !ret;
 
 abort:
