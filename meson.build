@@ -56,3 +56,10 @@ executable('bmpinspect',
            'bmpinspect.c',
            install: true,
 )
+
+
+executable('bmparray',
+           'bmparray.c',
+           install: true,
+           dependencies: [bmpdep],
+)

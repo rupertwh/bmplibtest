@@ -661,12 +661,12 @@ bool determine_info_version(const struct Bmpfile *fh, struct Bmpinfo *ih)
 const char* bmtype_descr(unsigned type)
 {
 	switch (type) {
-	case BMPFILE_BM: return "Windows or OS/2 BMP";
-	case BMPFILE_BA: return "OS/2 bitmap array";
-	case BMPFILE_CI: return "OS/2 color icon";
-	case BMPFILE_CP: return "OS/2 color pointer";
-	case BMPFILE_IC: return "OS/2 icon (b/w)";
-	case BMPFILE_PT: return "OS/2 pointer (b/w)";
+	case BMPFILE_BM: return "Windows or OS/2 BMP [BM]";
+	case BMPFILE_BA: return "OS/2 bitmap array [BA]";
+	case BMPFILE_CI: return "OS/2 color icon [CI]";
+	case BMPFILE_CP: return "OS/2 color pointer [CP]";
+	case BMPFILE_IC: return "OS/2 icon (b/w) [IC]";
+	case BMPFILE_PT: return "OS/2 pointer (b/w) [PT]";
 	default: return "(unknown)";
 	}
 }

@@ -492,3 +492,39 @@ test ( write rendering intent w/o profile ) {
     savebmp    { intent.bmp, loadraw, intent: IMAGES }
     rawcompare { 122, 4, 04000000 }
 }
+
+test (OS/2 color icon) {
+    loadbmp   { sample, afe_icon.ico }
+    savebmp   { afe_icon.bmp }
+}
+
+test (OS/2 color pointer) {
+    loadbmp   { sample, coffee.ptr }
+    savebmp   { coffee.bmp }
+}
+
+test (OS/2 b/w pointer) {
+    loadbmp   { sample, coffee-bw.ptr }
+    savebmp   { coffee-bw.bmp }
+}
+
+
+test (OS/2 color icon BA - 0) {
+    loadbmp   { sample, icon.ico, array:0 }
+    savebmp   { icon-1.bmp }
+}
+
+test (OS/2 color icon BA - 1) {
+    loadbmp   { sample, icon.ico, array:1 }
+    savebmp   { icon-2.bmp }
+}
+
+test (OS/2 color icon BA - 2) {
+    loadbmp   { sample, icon.ico, array:2 }
+    savebmp   { icon-3.bmp }
+}
+
+test (OS/2 color icon BA - 3) {
+    loadbmp   { sample, icon.ico, array:3 }
+    savebmp   { icon-4.bmp }
+}

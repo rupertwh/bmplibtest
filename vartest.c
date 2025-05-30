@@ -327,6 +327,7 @@ static bool perform_loadbmp(struct Argument *args)
 	FILE          *file = NULL;
 	struct Image  *img  = NULL;
 	BMPHANDLE      h    = NULL;
+	BMPHANDLE      harr = NULL;
 	BMPRESULT      res;
 	bool           set_undef = false;
 	BMPUNDEFINED   undefmode;
@@ -343,6 +344,7 @@ static bool perform_loadbmp(struct Argument *args)
 	bool           icc_loadonly = false;
 	BMPRESULT      expected = BMP_RESULT_OK;
 	BMPORIENT      orientation;
+	int            array_idx = -1;
 
 	if (args) {
 		dir  = args->argname;
@@ -455,6 +457,8 @@ static bool perform_loadbmp(struct Argument *args)
 				goto abort;
 			}
 			loadicc = true;
+		} else if (!strcmp(optname, "array")) {
+			array_idx = atoi(optvalue);
 		} else if (!strcmp(optname, "huff-t4black")) {
 			huff_t4black = !!atoi(optvalue);
 			set_huff_t4black = true;
@@ -481,14 +485,46 @@ static bool perform_loadbmp(struct Argument *args)
 	if ((res = bmpread_load_info(h))) {
 		if (res == BMP_RESULT_INSANE && insane)
 			bmpread_set_insanity_limit(h, bmpread_buffersize(h));
+		else if (res == BMP_RESULT_ARRAY) {
+			if (array_idx < 0) {
+				printf("File is a bitmap array, but no index given\n");
+				goto abort;
+			}
+		}
 		else {
 			success = (res == expected);
 			if (!success)
 				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
+	} else {
+		if (array_idx > -1) {
+			printf("Expected array\n");
+			goto abort;
+		}
 	}
 
+	if (array_idx > -1) {
+		int n = bmpread_array_num(h);
+
+		if (conf->verbose > 2)
+			printf("Bitmap array: %d images\n", n);
+		if (array_idx >= n) {
+			printf("Invalid array index %d. (max is %d)\n", array_idx, n);
+			goto abort;
+		}
+		struct BmpArrayInfo ai;
+
+		harr = h;
+		h = NULL;
+
+		if (bmpread_array_info(harr, &ai, array_idx)) {
+			printf("%s\n", bmp_errmsg(harr));
+			goto abort;
+		}
+
+		h = ai.handle;
+	}
 
 	if (set_undef)
 		bmpread_set_undefined(h, undefmode);
@@ -600,8 +636,11 @@ static bool perform_loadbmp(struct Argument *args)
 abort:
 	if (file)
 		fclose(file);
-	if (h)
+	if (harr)
+		bmp_free(harr);
+	else if (h)
 		bmp_free(h);
+
 	if (img)
 		img_free(img);
 

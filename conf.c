@@ -290,6 +290,29 @@ void conf_usage(void)
 }
 
 
+/********************************************************
+ * 	conf_free
+ *******************************************************/
+
+void conf_free(struct Conf *cmdline)
+{
+	if (!cmdline)
+		return;
+	if (cmdline->testfile)
+		free(cmdline->testfile);
+	if (cmdline->bmpsuitedir)
+		free(cmdline->bmpsuitedir);
+	if (cmdline->sampledir)
+		free(cmdline->sampledir);
+	if (cmdline->refdir)
+		free(cmdline->refdir);
+	if (cmdline->tmpdir)
+		free(cmdline->tmpdir);
+
+	free(cmdline);
+}
+
+
 /*
  * =====================================================================================
  *
@@ -524,26 +547,6 @@ abort:
 	return NULL;
 }
 
-
-/********************************************************
- * 	conf_free
- *******************************************************/
-
-void conf_free(struct Conf *cmdline)
-{
-	if (!cmdline)
-		return;
-	if (cmdline->testfile)
-		free(cmdline->testfile);
-	if (cmdline->sampledir)
-		free(cmdline->sampledir);
-	if (cmdline->refdir)
-		free(cmdline->refdir);
-	if (cmdline->tmpdir)
-		free(cmdline->tmpdir);
-
-	free(cmdline);
-}
 
 
 /********************************************************
