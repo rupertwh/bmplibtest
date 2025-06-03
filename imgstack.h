@@ -17,8 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-struct Image {
+struct Image
+{
 	unsigned char *buffer;
 	size_t         buffersize;
 	unsigned char *palette;
@@ -35,11 +35,10 @@ struct Image {
 	BMPORIENT      orientation;
 };
 
-
-bool imgstack_push(struct Image *img);
-struct Image* imgstack_get(int pos);
-bool imgstack_swap(void);
-void imgstack_delete(void);
-void imgstack_clear(void);
-void img_free(struct Image *img);
-void imgstack_destroy(void);
+bool          imgstack_push(struct Image *img);
+struct Image *imgstack_get(int pos);
+bool          imgstack_swap(void);
+void          imgstack_delete(void);
+void          imgstack_clear(void);
+void          img_free(struct Image *img);
+void          imgstack_destroy(void);

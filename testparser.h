@@ -17,36 +17,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-struct Argument {
+struct Argument
+{
 	struct Argument *next;
 	char            *argname;
 	char            *argvalue;
 };
 
-struct Action {
+struct Action
+{
 	struct Action   *next;
 	char            *actname;
 	struct Argument *arglist;
 };
 
-enum CommandType {
+enum CommandType
+{
 	COMMAND_TEST,
 	COMMAND_SETTINGS,
 };
 
-struct Command {
+struct Command
+{
 	struct Command  *next;
 	enum CommandType type;
 	char            *descr;
 	struct Action   *actionlist;
 };
 
-enum TestPrintStyle {
+enum TestPrintStyle
+{
 	PRINTSTYLE_DUMP,
 	PRINTSTYLE_PRETTY,
 };
 
-struct Command* parse_test_definitions(FILE *file);
-void print_test_definitions(enum TestPrintStyle style);
-void free_cmdlist(void);
+struct Command *parse_test_definitions(FILE *file);
+void            print_test_definitions(enum TestPrintStyle style);
+void            free_cmdlist(void);

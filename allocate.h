@@ -17,6 +17,5 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-void* allocate(int size, bool align);
-void free_all(void);
+void *allocate(int size, bool align);
+void  free_all(void);

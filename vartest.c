@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,53 +34,53 @@
 #include "testparser.h"
 #include "conf.h"
 
+const unsigned char checkmark[] = { 0x20, 0xE2, 0x9C, 0x93, 0 };
 
-const unsigned char checkmark[] = {0x20, 0xE2, 0x9C, 0x93, 0};
-
-static bool perform(struct Action *action);
-static bool perform_loadraw(struct Argument *args);
-static bool perform_loadbmp(struct Argument *args);
-static bool perform_loadpng(struct Argument *args);
-static bool perform_savebmp(struct Argument *args);
-static bool perform_swap(void);
-static bool perform_duplicate(void);
-static bool perform_compare(struct Argument *args);
-static bool perform_rawcompare(struct Argument *args);
-static bool perform_delete(void);
-static bool perform_convertgamma(struct Argument *args);
-static bool perform_flatten(void);
-static bool perform_exposure(struct Argument *args);
-static bool perform_convertformat(struct Argument *args);
-static bool perform_invertpalette(void);
-static void convert_format(BMPFORMAT format, int bits);
-static void set_exposure(double fstops);
-static struct Image* pngfile_read(FILE *file);
-static void trim_trailing_slash(char *str);
-static bool perform_addalpha(void);
+static bool            perform(struct Action *action);
+static bool            perform_loadraw(struct Argument *args);
+static bool            perform_loadbmp(struct Argument *args);
+static bool            perform_loadpng(struct Argument *args);
+static bool            perform_savebmp(struct Argument *args);
+static bool            perform_swap(void);
+static bool            perform_duplicate(void);
+static bool            perform_compare(struct Argument *args);
+static bool            perform_rawcompare(struct Argument *args);
+static bool            perform_delete(void);
+static bool            perform_convertgamma(struct Argument *args);
+static bool            perform_flatten(void);
+static bool            perform_exposure(struct Argument *args);
+static bool            perform_convertformat(struct Argument *args);
+static bool            perform_invertpalette(void);
+static void            convert_format(BMPFORMAT format, int bits);
+static void            set_exposure(double fstops);
+static struct Image   *pngfile_read(FILE *file);
+static void            trim_trailing_slash(char *str);
+static bool            perform_addalpha(void);
 static inline uint16_t float_to_s2_13(double d);
-static inline double s2_13_to_double(uint16_t s2_13);
-bool bmpresult_from_str(const char *str, BMPRESULT *res);
-bool rendering_intent_from_str(const char *str, BMPINTENT *intent);
+static inline double   s2_13_to_double(uint16_t s2_13);
+bool                   bmpresult_from_str(const char *str, BMPRESULT *res);
+bool        rendering_intent_from_str(const char *str, BMPINTENT *intent);
 static bool run_test(struct Command *cmd, int testnum);
 
 static struct Conf *conf;
 static FILE        *rawfile = NULL;
 
-
 int main(int argc, char *argv[])
 {
-	int  testnum = 0;
-	int  bad = 0, good = 0;
-	bool only_selected_tests;
+	int             testnum = 0;
+	int             bad = 0, good = 0;
+	bool            only_selected_tests;
 	struct Command *cmdlist;
 	FILE           *file;
 
-	if (!(conf = conf_parse_cmdline(argc, argv))) {
+	if (!(conf = conf_parse_cmdline(argc, argv)))
+	{
 		printf("try -? or --help\n");
 		return 1;
 	}
 
-	if (conf->help) {
+	if (conf->help)
+	{
 		conf_usage();
 		return 0;
 	}
@@ -93,7 +92,8 @@ int main(int argc, char *argv[])
 	trim_trailing_slash(conf->refdir);
 	trim_trailing_slash(conf->tmpdir);
 
-	if (conf->verbose > 0) {
+	if (conf->verbose > 0)
+	{
 		printf("test definitions: %s\n", conf->testfile);
 		printf("BMP Suite: %s\n", conf->bmpsuitedir);
 		printf("samples  : %s\n", conf->sampledir);
@@ -101,12 +101,14 @@ int main(int argc, char *argv[])
 		printf("tmp      : %s\n", conf->tmpdir);
 	}
 
-	if (!conf->testfile) {
+	if (!conf->testfile)
+	{
 		printf("No testfile specified\n");
 		printf("try -? or --help\n");
 		return 1;
 	}
-	if (!(file = fopen(conf->testfile, "r"))) {
+	if (!(file = fopen(conf->testfile, "r")))
+	{
 		perror(conf->testfile);
 		return 1;
 	}
@@ -114,31 +116,38 @@ int main(int argc, char *argv[])
 	cmdlist = parse_test_definitions(file);
 	fclose(file);
 
-	if (conf->pretty) {
+	if (conf->pretty)
+	{
 		print_test_definitions(PRINTSTYLE_PRETTY);
 		return 0;
 	}
 
-	if (conf->dump) {
+	if (conf->dump)
+	{
 		print_test_definitions(PRINTSTYLE_DUMP);
 		return 0;
 	}
 
-	for (struct Command *cmd = cmdlist; cmd; cmd = cmd->next) {
-
-		if (cmd->type == COMMAND_TEST) {
-
+	for (struct Command *cmd = cmdlist; cmd; cmd = cmd->next)
+	{
+		if (cmd->type == COMMAND_TEST)
+		{
 			testnum++;
 
 			/* if test numbers have been given on command line, skip all other tests */
-			if (only_selected_tests) {
+			if (only_selected_tests)
+			{
 				bool  found = false;
 				char *endptr;
-				for (struct Confstr **str = &conf->strlist; *str; str = &(*str)->next) {
-					if (*(*str)->str && testnum == strtol((*str)->str, &endptr, 10)) {
+				for (struct Confstr **str = &conf->strlist;
+				     *str; str            = &(*str)->next)
+				{
+					if (*(*str)->str &&
+					    testnum == strtol((*str)->str, &endptr, 10))
+					{
 						if (endptr && *endptr != '\0')
 							continue;
-						*str = (*str)->next;
+						*str  = (*str)->next;
 						found = true;
 						break;
 					}
@@ -148,41 +157,46 @@ int main(int argc, char *argv[])
 			}
 
 			bool failed = run_test(cmd, testnum);
-			if (failed) {
+			if (failed)
+			{
 				bad++;
 				if (conf->verbose > 0)
 					printf("****failed\n");
-			} else {
+			}
+			else
+			{
 				good++;
 				if (conf->verbose > 0)
 					printf("passed%s\n", checkmark);
 			}
 		}
-
 	}
 
 	free_cmdlist();
 
-	if (rawfile) {
+	if (rawfile)
+	{
 		fclose(rawfile);
 		rawfile = NULL;
 	}
 
-	if (conf->strlist) {
+	if (conf->strlist)
+	{
 		printf("\nThe following specified tests didn't exist:\n");
-		for (struct Confstr *str = conf->strlist; str; str = str->next) {
+		for (struct Confstr *str = conf->strlist; str; str = str->next)
+		{
 			printf(" - '%s'\n", str->str);
 		}
 		putchar('\n');
 	}
 
 	if (conf->verbose > -1)
-		printf("\nBad : %d\nGood: %d\n %s\n", bad, good, bad ? " ***!!!***" : (char*)checkmark);
+		printf("\nBad : %d\nGood: %d\n %s\n", bad, good,
+		       bad ? " ***!!!***" : (char *)checkmark);
 	imgstack_destroy();
 	conf_free(conf);
 	return bad;
 }
-
 
 static bool run_test(struct Command *cmd, int testnum)
 {
@@ -190,24 +204,31 @@ static bool run_test(struct Command *cmd, int testnum)
 
 	imgstack_clear();
 
-	if (conf->verbose > 0) {
+	if (conf->verbose > 0)
+	{
 		printf("\n===== Test %02d: %s\n", testnum, cmd->descr);
 	}
 
-	for (struct Action *action = cmd->actionlist; action; action = action->next) {
-
-		if (conf->verbose > 1) {
+	for (struct Action *action = cmd->actionlist; action; action = action->next)
+	{
+		if (conf->verbose > 1)
+		{
 			printf("--'%s'\n", action->actname);
-			if (conf->verbose > 2) {
-				for (struct Argument *arg = action->arglist; arg; arg = arg->next) {
+			if (conf->verbose > 2)
+			{
+				for (struct Argument *arg = action->arglist;
+				     arg; arg             = arg->next)
+				{
 					if (arg->argvalue && *arg->argvalue)
-						printf(" +--'%s':'%s'\n", arg->argname, arg->argvalue);
+						printf(" +--'%s':'%s'\n",
+						       arg->argname, arg->argvalue);
 					else
 						printf(" +--'%s'\n", arg->argname);
 				}
 			}
 		}
-		if (!perform(action)) {
+		if (!perform(action))
+		{
 			failed = true;
 			break;
 		}
@@ -215,7 +236,6 @@ static bool run_test(struct Command *cmd, int testnum)
 
 	return failed;
 }
-
 
 static bool perform(struct Action *action)
 {
@@ -257,13 +277,14 @@ static bool perform(struct Action *action)
 
 static bool loadraw(const char *filespec)
 {
-
-	if (rawfile) {
+	if (rawfile)
+	{
 		fclose(rawfile);
 		rawfile = NULL;
 	}
 
-	if (!(rawfile = fopen(filespec, "rb"))) {
+	if (!(rawfile = fopen(filespec, "rb")))
+	{
 		perror(filespec);
 		return false;
 	}
@@ -272,25 +293,29 @@ static bool loadraw(const char *filespec)
 
 static bool perform_loadraw(struct Argument *args)
 {
-	const char    *dir = NULL, *fname = NULL;
-	const char    *dirpath;
-	char           path[1024];
+	const char *dir = NULL, *fname = NULL;
+	const char *dirpath;
+	char        path[1024];
 
-	if (rawfile) {
+	if (rawfile)
+	{
 		fclose(rawfile);
 		rawfile = NULL;
 	}
 
-	if (args) {
+	if (args)
+	{
 		dir  = args->argname;
 		args = args->next;
-		if (args) {
+		if (args)
+		{
 			fname = args->argname;
 			args  = args->next;
 		}
 	}
 
-	if (!(fname && *fname)) {
+	if (!(fname && *fname))
+	{
 		printf("loadbmp: invalid filespec\n");
 		return false;
 	}
@@ -303,11 +328,14 @@ static bool perform_loadraw(struct Argument *args)
 		dirpath = conf->tmpdir;
 	else if (!strcmp(dir, "ref"))
 		dirpath = conf->refdir;
-	else {
+	else
+	{
 		printf("loadraw: Invalid dir '%s'\n", dir);
 		return false;
 	}
-	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+
+	if ((int)sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname))
+	{
 		printf("loadraw: path too small!");
 		exit(1);
 	}
@@ -315,47 +343,48 @@ static bool perform_loadraw(struct Argument *args)
 	return loadraw(path);
 }
 
-
-
 static bool perform_loadbmp(struct Argument *args)
 {
-	bool           success = false;
-	const char    *dir = NULL, *fname = NULL;
-	const char    *dirpath;
-	char          *optname, *optvalue;
-	char           path[1024];
-	FILE          *file = NULL;
-	struct Image  *img  = NULL;
-	BMPHANDLE      h    = NULL;
-	BMPHANDLE      harr = NULL;
-	BMPRESULT      res;
-	bool           set_undef = false;
-	BMPUNDEFINED   undefmode;
-	bool           set_format = false;
-	BMPFORMAT      format     = BMP_FORMAT_INT;
-	bool           set_conv64 = false;
-	BMPCONV64      conv64;
-	bool           set_huff_t4black = false;
-	int            huff_t4black = 1;
-	bool           insane       = false;
-	bool           line_by_line = false;
-	bool           index        = false;
-	bool           loadicc = false;
-	bool           icc_loadonly = false;
-	BMPRESULT      expected = BMP_RESULT_OK;
-	BMPORIENT      orientation;
-	int            array_idx = -1;
+	bool          success = false;
+	const char   *dir = NULL, *fname = NULL;
+	const char   *dirpath;
+	char         *optname, *optvalue;
+	char          path[1024];
+	FILE         *file = NULL;
+	struct Image *img  = NULL;
+	BMPHANDLE     h    = NULL;
+	BMPHANDLE     harr = NULL;
+	BMPRESULT     res;
+	bool          set_undef = false;
+	BMPUNDEFINED  undefmode;
+	bool          set_format = false;
+	BMPFORMAT     format     = BMP_FORMAT_INT;
+	bool          set_conv64 = false;
+	BMPCONV64     conv64;
+	bool          set_huff_t4black = false;
+	int           huff_t4black     = 1;
+	bool          insane           = false;
+	bool          line_by_line     = false;
+	bool          index            = false;
+	bool          loadicc          = false;
+	bool          icc_loadonly     = false;
+	BMPRESULT     expected         = BMP_RESULT_OK;
+	BMPORIENT     orientation;
+	int           array_idx = -1;
 
-	if (args) {
+	if (args)
+	{
 		dir  = args->argname;
 		args = args->next;
 	}
-	if (args) {
+	if (args)
+	{
 		fname = args->argname;
 		args  = args->next;
 	}
 
-	if (!(fname && *fname)) {
+	if (!(fname && *fname))
+	{
 		printf("loadbmp: invalid filespec\n");
 		goto abort;
 	}
@@ -368,60 +397,77 @@ static bool perform_loadbmp(struct Argument *args)
 		dirpath = conf->tmpdir;
 	else if (!strcmp(dir, "ref"))
 		dirpath = conf->refdir;
-	else {
+	else
+	{
 		printf("loadbmp: Invalid dir '%s'\n", dir);
 		goto abort;
 	}
-	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+
+	if ((int)sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname))
+	{
 		printf("loadbmp: path too small!");
 		exit(1);
 	}
 
-	while (args && args->argname) {
+	while (args && args->argname)
+	{
 		optname  = args->argname;
 		optvalue = args->argvalue;
 		if (!optvalue)
 			optvalue = "";
 
-		if (!strcmp(optname, "line")) {
+		if (!strcmp(optname, "line"))
+		{
 			if (!strcmp(optvalue, "whole"))
 				line_by_line = false;
 			else if (!strcmp(optvalue, "line"))
 				line_by_line = true;
-			else {
+			else
+			{
 				printf("loadbmp: invalid line mode '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "rgb")) {
+		}
+		else if (!strcmp(optname, "rgb"))
+		{
 			if (!strcmp(optvalue, "rgb"))
 				index = false;
 			else if (!strcmp(optvalue, "index"))
 				index = true;
-			else {
+			else
+			{
 				printf("loadbmp: invalid rgb mode '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "undef")) {
+		}
+		else if (!strcmp(optname, "undef"))
+		{
 			set_undef = true;
 			if (!strcmp(optvalue, "alpha"))
 				undefmode = BMP_UNDEFINED_TO_ALPHA;
 			else if (!strcmp(optvalue, "leave"))
 				undefmode = BMP_UNDEFINED_LEAVE;
-			else {
+			else
+			{
 				printf("loadbmp: invalid undef mode '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "conv64")) {
+		}
+		else if (!strcmp(optname, "conv64"))
+		{
 			set_conv64 = true;
 			if (!strcmp(optvalue, "srgb"))
 				conv64 = BMP_CONV64_SRGB;
 			else if (!strcmp(optvalue, "linear"))
 				conv64 = BMP_CONV64_LINEAR;
-			else {
+			else
+			{
 				printf("loadbmp: invalid conv64 mode '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "format")) {
+		}
+		else if (!strcmp(optname, "format"))
+		{
 			set_format = true;
 			if (!strcmp(optvalue, "int"))
 				format = BMP_FORMAT_INT;
@@ -429,52 +475,72 @@ static bool perform_loadbmp(struct Argument *args)
 				format = BMP_FORMAT_FLOAT;
 			else if (!strcmp(optvalue, "s2.13"))
 				format = BMP_FORMAT_S2_13;
-			else {
+			else
+			{
 				printf("loadbmp: invalid number format '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "insane")) {
+		}
+		else if (!strcmp(optname, "insane"))
+		{
 			if (!strcmp(optvalue, "yes"))
 				insane = true;
-			else {
+			else
+			{
 				printf("loadbmp: invalid insanity value. must be 'yes'");
 				goto abort;
 			}
-		} else if (!strcmp(optname, "expect")) {
-			if (!bmpresult_from_str(optvalue, &expected)) {
+		}
+		else if (!strcmp(optname, "expect"))
+		{
+			if (!bmpresult_from_str(optvalue, &expected))
+			{
 				printf("loadbmp: invalid expected result '%s'.", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "iccprofile")) {
-			if (!strcmp(optvalue, "loadonly")) {
+		}
+		else if (!strcmp(optname, "iccprofile"))
+		{
+			if (!strcmp(optvalue, "loadonly"))
+			{
 				icc_loadonly = true;
 			}
-			else if (!strcmp(optvalue, "apply")) {
+			else if (!strcmp(optvalue, "apply"))
+			{
 				icc_loadonly = false;
 			}
-			else {
+			else
+			{
 				printf("loadbmp: invalid option '%s' for iccprofile.", optvalue);
 				goto abort;
 			}
 			loadicc = true;
-		} else if (!strcmp(optname, "array")) {
+		}
+		else if (!strcmp(optname, "array"))
+		{
 			array_idx = atoi(optvalue);
-		} else if (!strcmp(optname, "huff-t4black")) {
-			huff_t4black = !!atoi(optvalue);
+		}
+		else if (!strcmp(optname, "huff-t4black"))
+		{
+			huff_t4black     = !!atoi(optvalue);
 			set_huff_t4black = true;
-		} else {
+		}
+		else
+		{
 			printf("loadbmp: unknown option '%s'\n", optname);
 			goto abort;
 		}
 		args = args->next;
 	}
 
-	if (!(file = fopen(path, "rb"))) {
+	if (!(file = fopen(path, "rb")))
+	{
 		perror(path);
 		goto abort;
 	}
 
-	if (!(h = bmpread_new(file))) {
+	if (!(h = bmpread_new(file)))
+	{
 		printf("Couldn't get bmpread handle\n");
 		goto abort;
 	}
@@ -482,43 +548,53 @@ static bool perform_loadbmp(struct Argument *args)
 	if (set_huff_t4black)
 		bmp_set_huffman_t4black_value(h, huff_t4black);
 
-	if ((res = bmpread_load_info(h))) {
+	if ((res = bmpread_load_info(h)))
+	{
 		if (res == BMP_RESULT_INSANE && insane)
 			bmpread_set_insanity_limit(h, bmpread_buffersize(h));
-		else if (res == BMP_RESULT_ARRAY) {
-			if (array_idx < 0) {
+		else if (res == BMP_RESULT_ARRAY)
+		{
+			if (array_idx < 0)
+			{
 				printf("File is a bitmap array, but no index given\n");
 				goto abort;
 			}
 		}
-		else {
+		else
+		{
 			success = (res == expected);
 			if (!success)
 				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
-	} else {
-		if (array_idx > -1) {
+	}
+	else
+	{
+		if (array_idx > -1)
+		{
 			printf("Expected array\n");
 			goto abort;
 		}
 	}
 
-	if (array_idx > -1) {
+	if (array_idx > -1)
+	{
 		int n = bmpread_array_num(h);
 
 		if (conf->verbose > 2)
 			printf("Bitmap array: %d images\n", n);
-		if (array_idx >= n) {
+		if (array_idx >= n)
+		{
 			printf("Invalid array index %d. (max is %d)\n", array_idx, n);
 			goto abort;
 		}
 		struct BmpArrayInfo ai;
 
 		harr = h;
-		h = NULL;
+		h    = NULL;
 
-		if (bmpread_array_info(harr, &ai, array_idx)) {
+		if (bmpread_array_info(harr, &ai, array_idx))
+		{
 			printf("%s\n", bmp_errmsg(harr));
 			goto abort;
 		}
@@ -529,7 +605,8 @@ static bool perform_loadbmp(struct Argument *args)
 	if (set_undef)
 		bmpread_set_undefined(h, undefmode);
 
-	if (!(img = malloc(sizeof *img))) {
+	if (!(img = malloc(sizeof *img)))
+	{
 		perror("malloc");
 		goto abort;
 	}
@@ -538,42 +615,53 @@ static bool perform_loadbmp(struct Argument *args)
 	img->xdpi = bmpread_resolution_xdpi(h);
 	img->ydpi = bmpread_resolution_ydpi(h);
 
-	if (loadicc && icc_loadonly) {
+	if (loadicc && icc_loadonly)
+	{
 
 		img->iccprofile_size = bmpread_iccprofile_size(h);
-		if (!img->iccprofile_size) {
+		if (!img->iccprofile_size)
+		{
 			printf("no valid profile in file\n");
 			goto abort;
 		}
-		if ((res = bmpread_load_iccprofile(h, &img->iccprofile))) {
+		if ((res = bmpread_load_iccprofile(h, &img->iccprofile)))
+		{
 			success = (res == expected);
 			if (!success)
 				printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
 		if (conf->verbose > 2)
-			printf("     Successfully loaded profile (size %lu bytes).\n", (unsigned long) img->iccprofile_size);
+			printf("     Successfully loaded profile (size %lu bytes).\n",
+			       (unsigned long)img->iccprofile_size);
 	}
 
-	if (set_conv64) {
-		if (bmpread_set_64bit_conv(h, conv64)) {
+	if (set_conv64)
+	{
+		if (bmpread_set_64bit_conv(h, conv64))
+		{
 			printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
-	if (set_format) {
-		if (bmp_set_number_format(h, format)) {
+	if (set_format)
+	{
+		if (bmp_set_number_format(h, format))
+		{
 			printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
 	img->format = format;
 
-	if (index) {
+	if (index)
+	{
 		fflush(stdout);
 		img->numcolors = bmpread_num_palette_colors(h);
-		if (img->numcolors > 0) {
-			if ((res = bmpread_load_palette(h, &img->palette))) {
+		if (img->numcolors > 0)
+		{
+			if ((res = bmpread_load_palette(h, &img->palette)))
+			{
 				success = (res == expected);
 				if (!success)
 					printf("%s\n", bmp_errmsg(h));
@@ -582,55 +670,69 @@ static bool perform_loadbmp(struct Argument *args)
 		}
 	}
 
-	img->width    = bmpread_width(h);
-	img->height   = bmpread_height(h);
-	img->channels = bmpread_channels(h);
+	img->width          = bmpread_width(h);
+	img->height         = bmpread_height(h);
+	img->channels       = bmpread_channels(h);
 	img->bitsperchannel = bmpread_bitsperchannel(h);
 	img->buffersize     = bmpread_buffersize(h);
-	orientation = bmpread_orientation(h);
+	orientation         = bmpread_orientation(h);
 
-	if (line_by_line) {
-		if (!(img->buffer = malloc(img->buffersize))) {
+	if (line_by_line)
+	{
+		if (!(img->buffer = malloc(img->buffersize)))
+		{
 			perror("buffer");
 			goto abort;
 		}
 		unsigned char *line;
-		for (int y = 0; y < img->height; y++) {
+		for (int y = 0; y < img->height; y++)
+		{
 			int real_y = orientation == BMP_ORIENT_TOPDOWN ? y : img->height - y - 1;
-			line = img->buffer + (uint64_t) real_y * img->width * img->channels * img->bitsperchannel / 8;
-			if ((res = bmpread_load_line(h, &line))) {
+			line = img->buffer + (uint64_t)real_y * img->width * img->channels *
+			                         img->bitsperchannel / 8;
+			if ((res = bmpread_load_line(h, &line)))
+			{
 				success = (res == expected);
 				if (!success)
 					printf("%s\n", bmp_errmsg(h));
 				goto abort;
-			} else {
+			}
+			else
+			{
 				success = true;
 			}
 		}
-
-	} else {
-		if ((res = bmpread_load_image(h, &img->buffer))) {
+	}
+	else
+	{
+		if ((res = bmpread_load_image(h, &img->buffer)))
+		{
 			success = (res == expected);
-			if (!success) {
+			if (!success)
+			{
 				printf("%s\n", bmp_errmsg(h));
 				goto abort;
 			}
 		}
-		else {
+		else
+		{
 			success = true;
 		}
 	}
 
 	if (conf->verbose > 2)
 		printf("     Image %s loaded\n", path);
-	bmp_free(h); h = NULL;
-	fclose(file); file = NULL;
+
+	bmp_free(h);
+	h = NULL;
+	fclose(file);
+	file = NULL;
 
 	if (!imgstack_push(img))
 		goto abort;
 
 	img = NULL;
-	//success = (expected == BMP_RESULT_OK);
+	// success = (expected == BMP_RESULT_OK);
 
 	/* fall through */
 abort:
@@ -647,82 +749,93 @@ abort:
 	return success;
 }
 
-
 static bool perform_savebmp(struct Argument *args)
 {
 	const char   *fname = NULL;
 	const char   *dirpath;
 	char         *optname, *optvalue;
 	char          path[1024];
-	FILE         *file = NULL;
-	struct Image *img  = NULL;
-	BMPHANDLE     h    = NULL;
+	FILE         *file       = NULL;
+	struct Image *img        = NULL;
+	BMPHANDLE     h          = NULL;
 	bool          set_format = false;
 	BMPFORMAT     format;
 	bool          set_rle = false;
 	BMPRLETYPE    rle;
-	bool          set_intent = false;
-	BMPINTENT     intent = BMP_INTENT_NONE;
-	int           bufferbits  = 0;
-	bool          set_outbits = false;
-	int           outbits[4]  = {0,0,0,0};
-	bool          set_64bit   = false;
-	bool          allow_huff  = false;
-	bool          allow_2bit  = false;
-	bool          allow_rle24 = false;
-	bool          set_huff_fgidx   = false;
-	int           huff_fgidx       = 1;
-	bool          set_huff_t4black = false;
-	int           huff_t4black     = 1;
-	bool          icc_embed = false;
+	bool          set_intent         = false;
+	BMPINTENT     intent             = BMP_INTENT_NONE;
+	int           bufferbits         = 0;
+	bool          set_outbits        = false;
+	int           outbits[4]         = { 0, 0, 0, 0 };
+	bool          set_64bit          = false;
+	bool          allow_huff         = false;
+	bool          allow_2bit         = false;
+	bool          allow_rle24        = false;
+	bool          set_huff_fgidx     = false;
+	int           huff_fgidx         = 1;
+	bool          set_huff_t4black   = false;
+	int           huff_t4black       = 1;
+	bool          icc_embed          = false;
 	bool          loadraw_after_save = false;
-	bool          line_by_line = false;
+	bool          line_by_line       = false;
 
-	if (args) {
+	if (args)
+	{
 		fname = args->argname;
 		args  = args->next;
 	}
 
-	if (!(fname && *fname)) {
+	if (!(fname && *fname))
+	{
 		printf("savebmp: invalid filespec\n");
 		goto abort;
 	}
 
 	dirpath = conf->tmpdir;
 
-	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+	if ((int)sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname))
+	{
 		printf("path too small!");
 		exit(1);
 	}
 
-	while (args && args->argname) {
+	while (args && args->argname)
+	{
 		optname  = args->argname;
 		optvalue = args->argvalue;
 		if (!optvalue)
 			optvalue = "";
 
-		if (!strcmp(optname, "bufferbits")) {
+		if (!strcmp(optname, "bufferbits"))
+		{
 			bufferbits = atol(optvalue);
-			switch (bufferbits) {
+			switch (bufferbits)
+			{
 			case 8:
 			case 16:
 			case 32:
 				/* ok */
 				break;
+
 			default:
 				printf("savebmp: invalid bufferbits (%d)\n", bufferbits);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "line")) {
+		}
+		else if (!strcmp(optname, "line"))
+		{
 			if (!strcmp(optvalue, "whole"))
 				line_by_line = false;
 			else if (!strcmp(optvalue, "line"))
 				line_by_line = true;
-			else {
+			else
+			{
 				printf("savebmp: invalid line mode '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "format")) {
+		}
+		else if (!strcmp(optname, "format"))
+		{
 			set_format = true;
 			if (!strcmp(optvalue, "int"))
 				format = BMP_FORMAT_INT;
@@ -730,11 +843,14 @@ static bool perform_savebmp(struct Argument *args)
 				format = BMP_FORMAT_FLOAT;
 			else if (!strcmp(optvalue, "s2.13"))
 				format = BMP_FORMAT_S2_13;
-			else {
+			else
+			{
 				printf("savebmp: invalid number format '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "rle")) {
+		}
+		else if (!strcmp(optname, "rle"))
+		{
 			set_rle = true;
 			if (!strcmp(optvalue, "auto"))
 				rle = BMP_RLE_AUTO;
@@ -742,40 +858,51 @@ static bool perform_savebmp(struct Argument *args)
 				rle = BMP_RLE_RLE8;
 			else if (!strcmp(optvalue, "none"))
 				rle = BMP_RLE_NONE;
-			else {
+			else
+			{
 				printf("savebmp: invalid rle option '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "allow")) {
+		}
+		else if (!strcmp(optname, "allow"))
+		{
 			if (!strcmp(optvalue, "huff"))
 				allow_huff = true;
 			else if (!strcmp(optvalue, "2bit"))
 				allow_2bit = true;
 			else if (!strcmp(optvalue, "rle24"))
 				allow_rle24 = true;
-			else {
+			else
+			{
 				printf("savebmp: invalid allow option '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "loadraw")) {
+		}
+		else if (!strcmp(optname, "loadraw"))
+		{
 			loadraw_after_save = true;
+		}
+		else if (!strcmp(optname, "huff-fgidx"))
+		{
 
-		} else if (!strcmp(optname, "huff-fgidx")) {
-
-			huff_fgidx = !!atoi(optvalue);
+			huff_fgidx     = !!atoi(optvalue);
 			set_huff_fgidx = true;
+		}
+		else if (!strcmp(optname, "huff-t4black"))
+		{
 
-		} else if (!strcmp(optname, "huff-t4black")) {
-
-			huff_t4black = !!atoi(optvalue);
+			huff_t4black     = !!atoi(optvalue);
 			set_huff_t4black = true;
-
-		} else if (!strcmp(optname, "outbits")) {
+		}
+		else if (!strcmp(optname, "outbits"))
+		{
 			set_outbits = true;
-			int col;
+			int   col;
 			char *str;
-			while (*optvalue) {
-				switch (*optvalue) {
+			while (*optvalue)
+			{
+				switch (*optvalue)
+				{
 				case 'r': col = 0; break;
 				case 'g': col = 1; break;
 				case 'b': col = 2; break;
@@ -785,36 +912,47 @@ static bool perform_savebmp(struct Argument *args)
 					goto abort;
 				}
 				outbits[col] = strtol(++optvalue, &str, 10);
-				if (str <= optvalue) {
+				if (str <= optvalue)
+				{
 					printf("hmmmmmmm....\n");
 					break;
 				}
 				optvalue = str;
 			}
-		} else if (!strcmp(optname, "64bit")) {
+		}
+		else if (!strcmp(optname, "64bit"))
+		{
 			if (!strcmp(optvalue, "yes"))
 				set_64bit = true;
 			else if (!strcmp(optvalue, "no"))
 				set_64bit = false;
-			else {
+			else
+			{
 				printf("savebmp: invalid 64bit option '%s'\n", optvalue);
 				goto abort;
 			}
-
-		}  else if (!strcmp(optname, "iccprofile")) {
+		}
+		else if (!strcmp(optname, "iccprofile"))
+		{
 			if (!strcmp(optvalue, "embed"))
 				icc_embed = true;
-			else {
+			else
+			{
 				printf("savebmp: invalid iccprofile option '%s'\n", optvalue);
 				goto abort;
 			}
-		} else if (!strcmp(optname, "intent")) {
-			if (!rendering_intent_from_str(optvalue, &intent)) {
+		}
+		else if (!strcmp(optname, "intent"))
+		{
+			if (!rendering_intent_from_str(optvalue, &intent))
+			{
 				printf("savebmp: invalid intent '%s'.", optvalue);
 				goto abort;
 			}
 			set_intent = true;
-		} else {
+		}
+		else
+		{
 			printf("savebmp: unknown option %s\n", optname);
 			goto abort;
 		}
@@ -824,82 +962,95 @@ static bool perform_savebmp(struct Argument *args)
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	if (!(file = fopen(path, "wb"))) {
+	if (!(file = fopen(path, "wb")))
+	{
 		perror(path);
 		goto abort;
 	}
 
-	if (!(h = bmpwrite_new(file))) {
+	if (!(h = bmpwrite_new(file)))
+	{
 		printf("Couldn't get bmpwrite handle\n");
 		goto abort;
 	}
 
-	if (set_64bit) {
-		if (bmpwrite_set_64bit(h)) {
+	if (set_64bit)
+	{
+		if (bmpwrite_set_64bit(h))
+		{
 			printf("setting 64bit: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
 
-	if (set_outbits) {
-		if (bmpwrite_set_output_bits(h, outbits[0], outbits[1], outbits[2], outbits[3])) {
+	if (set_outbits)
+	{
+		if (bmpwrite_set_output_bits(h, outbits[0], outbits[1],
+		                             outbits[2], outbits[3]))
+		{
 			printf("setting 64bit: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
 
-	if (allow_2bit) {
+	if (allow_2bit)
 		bmpwrite_allow_2bit(h);
-	}
 
-	if (allow_huff) {
+	if (allow_huff)
 		bmpwrite_allow_huffman(h);
-	}
 
-	if (allow_rle24) {
+	if (allow_rle24)
 		bmpwrite_allow_rle24(h);
-	}
 
-	if (set_huff_fgidx) {
+	if (set_huff_fgidx)
 		bmpwrite_set_huffman_img_fg_idx(h, huff_fgidx);
-	}
 
-	if (set_huff_t4black) {
+	if (set_huff_t4black)
 		bmp_set_huffman_t4black_value(h, huff_t4black);
-	}
 
-	if (img->palette) {
-		if (bmpwrite_set_palette(h, img->numcolors, img->palette)) {
+	if (img->palette)
+	{
+		if (bmpwrite_set_palette(h, img->numcolors, img->palette))
+		{
 			printf("setting palette: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
-	if (set_rle) {
-		if (bmpwrite_set_rle(h, rle)) {
+	if (set_rle)
+	{
+		if (bmpwrite_set_rle(h, rle))
+		{
 			printf("setting rle: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
 
-	if (icc_embed) {
-		if (img->iccprofile_size <= 0) {
+	if (icc_embed)
+	{
+		if (img->iccprofile_size <= 0)
+		{
 			printf("Source image has no ICC profile.");
 			goto abort;
 		}
-		if (bmpwrite_set_iccprofile(h, img->iccprofile_size, img->iccprofile)) {
+		if (bmpwrite_set_iccprofile(h, img->iccprofile_size, img->iccprofile))
+		{
 			printf("Couldn't set ICC profile: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
 
-	if (set_intent) {
-		if (bmpwrite_set_rendering_intent(h, intent)) {
+	if (set_intent)
+	{
+		if (bmpwrite_set_rendering_intent(h, intent))
+		{
 			printf("Setting intent: %s\n", bmp_errmsg(h));
 			goto abort;
 		}
 	}
-	if (set_format && format != img->format) {
-		if (format == BMP_FORMAT_INT && !bufferbits) {
+	if (set_format && format != img->format)
+	{
+		if (format == BMP_FORMAT_INT && !bufferbits)
+		{
 			printf("cannot set output INT w/o specifying bits\n");
 			exit(1);
 		}
@@ -909,26 +1060,36 @@ static bool perform_savebmp(struct Argument *args)
 	if (img->format)
 		bmp_set_number_format(h, img->format);
 
-	if (bmpwrite_set_dimensions(h, img->width, img->height, img->channels, img->bitsperchannel)) {
+	if (bmpwrite_set_dimensions(h, img->width, img->height, img->channels, img->bitsperchannel))
+	{
 		printf("set dimensions: %s\n", bmp_errmsg(h));
 		goto abort;
 	}
 
-	if (img->xdpi || img->ydpi) {
+	if (img->xdpi || img->ydpi)
+	{
 		bmpwrite_set_resolution(h, img->xdpi, img->ydpi);
 	}
 
-	if (line_by_line) {
-		for (int y = 0; y < img->height; y++) {
-			int real_y = img->height - y - 1;
-			unsigned char *line = img->buffer + (uint64_t) real_y * img->width * img->channels * img->bitsperchannel / 8;
-			if (bmpwrite_save_line(h, line)) {
+	if (line_by_line)
+	{
+		for (int y = 0; y < img->height; y++)
+		{
+			int            real_y = img->height - y - 1;
+			unsigned char *line   = img->buffer +
+			                      (uint64_t)real_y * img->width * img->channels *
+			                          img->bitsperchannel / 8;
+			if (bmpwrite_save_line(h, line))
+			{
 				printf("%s\n", bmp_errmsg(h));
 				goto abort;
 			}
 		}
-	} else {
-		if (bmpwrite_save_image(h, img->buffer)) {
+	}
+	else
+	{
+		if (bmpwrite_save_image(h, img->buffer))
+		{
 			printf("%s\n", bmp_errmsg(h));
 			goto abort;
 		}
@@ -937,9 +1098,8 @@ static bool perform_savebmp(struct Argument *args)
 	bmp_free(h);
 	fclose(file);
 
-	if (loadraw_after_save) {
+	if (loadraw_after_save)
 		return loadraw(path);
-	}
 
 	return true;
 
@@ -952,12 +1112,12 @@ abort:
 	return false;
 }
 
-
 static int hexval(const char *str)
 {
 	int hex = 0;
 
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++)
+	{
 		int digit;
 		if ('0' <= str[i] && str[i] <= '9')
 			digit = str[i] - '0';
@@ -974,31 +1134,36 @@ static int hexval(const char *str)
 
 static bool perform_rawcompare(struct Argument *args)
 {
-	const int    maxbytes = 100;
-	const char  *offsetstr = NULL, *sizestr = NULL, *hexstr = NULL;
-	long         offset;
-	int          size, byte;
-	uint8_t      bytes[maxbytes];
+	const int   maxbytes  = 100;
+	const char *offsetstr = NULL, *sizestr = NULL, *hexstr = NULL;
+	long        offset;
+	int         size, byte;
+	uint8_t     bytes[maxbytes];
 
-	if (args) {
+	if (args)
+	{
 		offsetstr = args->argname;
 		args      = args->next;
-		if (args) {
+		if (args)
+		{
 			sizestr = args->argname;
 			args    = args->next;
 		}
-			if (args) {
-				hexstr = args->argname;
-				args   = args->next;
-			}
+		if (args)
+		{
+			hexstr = args->argname;
+			args   = args->next;
+		}
 	}
 
-	if (!(hexstr && *hexstr)) {
+	if (!(hexstr && *hexstr))
+	{
 		printf("rawcompare: invalid arguments\n");
 		return false;
 	}
 
-	if (!rawfile) {
+	if (!rawfile)
+	{
 		printf("rawcompare: no raw file loaded\n");
 		return false;
 	}
@@ -1006,29 +1171,33 @@ static bool perform_rawcompare(struct Argument *args)
 	offset = atol(offsetstr);
 	size   = atoi(sizestr);
 
-	if (size < 1 || size > maxbytes) {
-		printf("rawcompare: invalid size (%d, max is %d).\n",
-			size, maxbytes);
+	if (size < 1 || size > maxbytes)
+	{
+		printf("rawcompare: invalid size (%d, max is %d).\n", size, maxbytes);
 		return false;
 	}
 
 	size_t hexlen = strlen(hexstr);
-	if (hexlen != (size_t) size * 2) {
+	if (hexlen != (size_t)size * 2)
+	{
 		printf("rawcompare: invalid length of hex string (is %zu, should be %d).\n",
-			hexlen, size * 2);
+		       hexlen, size * 2);
 		return false;
 	}
 
-	if (offset < 0) {
+	if (offset < 0)
+	{
 		printf("rawcompare: invalid offset (%ld)\n", offset);
 		return false;
 	}
 
-	if (fseek(rawfile, offset, SEEK_SET)) {
+	if (fseek(rawfile, offset, SEEK_SET))
+	{
 		perror("rawcompare: seeking to offset");
 		return false;
 	}
-	if ((size_t)size != fread(bytes, 1, size, rawfile)) {
+	if ((size_t)size != fread(bytes, 1, size, rawfile))
+	{
 		if (feof(rawfile))
 			printf("rawcompare: EOF while reading bytes\n");
 		else
@@ -1036,22 +1205,25 @@ static bool perform_rawcompare(struct Argument *args)
 		return false;
 	}
 
-	for (int i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++)
+	{
 		byte = hexval(&hexstr[2 * i]);
-		if (byte == -1) {
+		if (byte == -1)
+		{
 			printf("rawcompare: invalid hex value\n");
 			return false;
 		}
-		if (byte != bytes[i]) {
+		if (byte != bytes[i])
+		{
 			printf("rawcompare: mismatch on byte %d: Is 0x%02x (%d), should be 0x%02x (%d)\n",
-				i, (unsigned)bytes[i], (int)bytes[i], (unsigned)byte, (int) byte);
+			       i, (unsigned)bytes[i], (int)bytes[i],
+			       (unsigned)byte, (int)byte);
 			return false;
 		}
 	}
 
 	return true;
 }
-
 
 static bool perform_swap(void)
 {
@@ -1068,19 +1240,23 @@ static bool perform_duplicate(void)
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	if (!(newimg = malloc(sizeof *newimg))) {
+	if (!(newimg = malloc(sizeof *newimg)))
+	{
 		perror("malloc");
 		goto abort;
 	}
 	memset(newimg, 0, sizeof *newimg);
 
-	if (!(newimg->buffer = malloc(img->buffersize))) {
+	if (!(newimg->buffer = malloc(img->buffersize)))
+	{
 		perror("malloc");
 		goto abort;
 	}
 
-	if (img->palette) {
-		if (!(newimg->palette = malloc(img->numcolors * 4))) {
+	if (img->palette)
+	{
+		if (!(newimg->palette = malloc(img->numcolors * 4)))
+		{
 			perror("malloc");
 			goto abort;
 		}
@@ -1088,8 +1264,10 @@ static bool perform_duplicate(void)
 		newimg->numcolors = img->numcolors;
 	}
 
-	if (img->iccprofile) {
-		if (!(newimg->iccprofile = malloc(img->iccprofile_size))) {
+	if (img->iccprofile)
+	{
+		if (!(newimg->iccprofile = malloc(img->iccprofile_size)))
+		{
 			perror("malloc");
 			goto abort;
 		}
@@ -1112,7 +1290,8 @@ static bool perform_duplicate(void)
 
 	return true;
 abort:
-	if (newimg) {
+	if (newimg)
+	{
 		if (newimg->buffer)
 			free(newimg->buffer);
 		if (newimg->palette)
@@ -1121,7 +1300,6 @@ abort:
 	}
 	return false;
 }
-
 
 static bool perform_addalpha(void)
 {
@@ -1133,15 +1311,17 @@ static bool perform_addalpha(void)
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	if (!(img->channels == 3)) {
+	if (!(img->channels == 3))
+	{
 		printf("Can add alpha channel only to RGB image\n");
 		return false;
 	}
 
 	bytesperchannel = img->bitsperchannel / 8;
-	new_size = (uint64_t) img->width * img->height * 4 * bytesperchannel;
+	new_size = (uint64_t)img->width * img->height * 4 * bytesperchannel;
 
-	if (!(tmp = realloc(img->buffer, new_size))) {
+	if (!(tmp = realloc(img->buffer, new_size)))
+	{
 		perror("add alpha");
 		return false;
 	}
@@ -1152,51 +1332,65 @@ static bool perform_addalpha(void)
 	offnew = img->width * img->height * 4;
 	offold = img->width * img->height * 3;
 
-	while (offold > 0) {
-
+	while (offold > 0)
+	{
 		offnew -= 4;
 		offold -= 3;
 
-		for (int c = 2; c >= 0; c--) {
-			switch (bytesperchannel) {
+		for (int c = 2; c >= 0; c--)
+		{
+			switch (bytesperchannel)
+			{
 			case 1:
-				((uint8_t*)img->buffer)[offnew + c] = ((uint8_t*)img->buffer)[offold + c];
+				((uint8_t *)img->buffer)[offnew + c] =
+				                    ((uint8_t *)img->buffer)[offold + c];
 				break;
+
 			case 2:
-				((uint16_t*)img->buffer)[offnew + c] = ((uint16_t*)img->buffer)[offold + c];
+				((uint16_t *)img->buffer)[offnew + c] =
+				                    ((uint16_t *)img->buffer)[offold + c];
 				break;
+
 			case 4:
-				((uint32_t*)img->buffer)[offnew + c] = ((uint32_t*)img->buffer)[offold + c];
+				((uint32_t *)img->buffer)[offnew + c] =
+				                    ((uint32_t *)img->buffer)[offold + c];
 				break;
+
 			default:
 				printf("wahhh\n");
 				exit(1);
 			}
 		}
-		switch (img->format) {
+
+		switch (img->format)
+		{
 		case BMP_FORMAT_FLOAT:
-			((float*)img->buffer)[offnew + 3] = 1.0;
+			((float *)img->buffer)[offnew + 3] = 1.0;
 			break;
+
 		case BMP_FORMAT_S2_13:
-			((int16_t*)img->buffer)[offnew + 3] = 8192;
+			((int16_t *)img->buffer)[offnew + 3] = 8192;
 			break;
+
 		case BMP_FORMAT_INT:
-			switch (bytesperchannel) {
+			switch (bytesperchannel)
+			{
 			case 1:
 				img->buffer[offnew + 3] = 0xff;
 				break;
+
 			case 2:
-				((uint16_t*)img->buffer)[offnew + 3] = 0xffff;
+				((uint16_t *)img->buffer)[offnew + 3] = 0xffff;
 				break;
+
 			case 4:
-				((uint32_t*)img->buffer)[offnew + 3] = 0xffffffff;
+				((uint32_t *)img->buffer)[offnew + 3] = 0xffffffff;
 				break;
 			}
 		}
 	}
 	return true;
 }
-
 
 static bool perform_flatten(void)
 {
@@ -1207,49 +1401,56 @@ static bool perform_flatten(void)
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	if (!(img->palette && img->channels == 1 && img->bitsperchannel == 8)) {
+	if (!(img->palette && img->channels == 1 && img->bitsperchannel == 8))
+	{
 		printf("Cannot flatten RGB image\n");
 		return false;
 	}
 
 	img->channels = 3;
-	new_size = img->width * img->height * img->channels;
-	if (!(tmp = realloc(img->buffer, new_size))) {
+	new_size      = img->width * img->height * img->channels;
+	if (!(tmp = realloc(img->buffer, new_size)))
+	{
 		perror("flatten");
 		return false;
 	}
-	img->buffer = tmp;
+	img->buffer     = tmp;
 	img->buffersize = new_size;
 
 	offnew = new_size;
 	offold = img->width * img->height;
-	while (offold > 0) {
+	while (offold > 0)
+	{
 		offnew -= 3;
 		offold -= 1;
-		for (int c = 2; c >= 0; c--) {
+		for (int c = 2; c >= 0; c--)
+		{
 			img->buffer[offnew + c] = img->palette[4 * img->buffer[offold] + c];
 		}
 	}
 
-	free (img->palette);
-	img->palette = NULL;
+	free(img->palette);
+	img->palette   = NULL;
 	img->numcolors = 0;
 	return true;
 }
 
-
 static bool perform_exposure(struct Argument *args)
 {
-	char   *opt, *optval;
-	double  fstops = 0.0;
+	char  *opt, *optval;
+	double fstops = 0.0;
 
-	while (args && args->argname) {
+	while (args && args->argname)
+	{
 		opt    = args->argname;
 		optval = args->argvalue;
 
-		if (!strcmp(opt, "fstops")) {
+		if (!strcmp(opt, "fstops"))
+		{
 			fstops = atof(optval);
-		} else {
+		}
+		else
+		{
 			if (conf->verbose > -2)
 				printf("exposure: unkown option %s\n", opt);
 			return false;
@@ -1261,44 +1462,52 @@ static bool perform_exposure(struct Argument *args)
 	return true;
 }
 
-
-
 static void convert_srgb_to_linear(void);
 static void convert_linear_to_srgb(void);
 
 static bool perform_convertgamma(struct Argument *args)
 {
-	const char   *from = NULL, *to = NULL;
+	const char *from = NULL, *to = NULL;
 
-	if (args) {
+	if (args)
+	{
 		from = args->argname;
 		args = args->next;
 	}
-	if (args) {
+	if (args)
+	{
 		to   = args->argname;
 		args = args->next;
 	}
 
-	if (!(to && *to)) {
+	if (!(to && *to))
+	{
 		printf("convertgamma: need from,to\n");
 		return false;
 	}
 
-	if (!strcmp(from, "srgb")) {
+	if (!strcmp(from, "srgb"))
+	{
 		if (!strcmp(to, "linear"))
 			convert_srgb_to_linear();
-		else {
+		else
+		{
 			printf("Unknown conversion to %s\n", to);
 			return false;
 		}
-	} else if (!strcmp(from, "linear")) {
+	}
+	else if (!strcmp(from, "linear"))
+	{
 		if (!strcmp(to, "srgb"))
 			convert_linear_to_srgb();
-		else {
+		else
+		{
 			printf("Unknown conversion to %s\n", to);
 			return false;
 		}
-	} else {
+	}
+	else
+	{
 		printf("Unknown conversion from %s\n", from);
 		return false;
 	}
@@ -1307,51 +1516,46 @@ static bool perform_convertgamma(struct Argument *args)
 
 static double srgb_to_linear(double d);
 static double linear_to_srgb(double d);
-static void convert_gamma(double (*func)(double));
-
+static void   convert_gamma(double (*func)(double));
 
 static void convert_srgb_to_linear(void)
 {
 	convert_gamma(srgb_to_linear);
 }
 
-
 static void convert_linear_to_srgb(void)
 {
 	convert_gamma(linear_to_srgb);
 }
-
 
 static double srgb_to_linear(double d)
 {
 	if (d <= 0.04045)
 		d = d / 12.92;
 	else
-		d = pow((d+0.055)/1.055, 2.4);
+		d = pow((d + 0.055) / 1.055, 2.4);
 	return d;
 }
-
 
 static double linear_to_srgb(double d)
 {
 	if (d <= 0.0031308)
 		d *= 12.92;
 	else
-		d = 1.055 * pow(d, 1.0/2.4) - 0.055;
+		d = 1.055 * pow(d, 1.0 / 2.4) - 0.055;
 	return d;
 }
-
 
 static void convert_gamma(double (*func)(double))
 {
 	struct Image *img;
-	int channels, colorchannels;
+	int           channels, colorchannels;
 	size_t        px, npixels;
 
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	npixels = img->width * img->height;
+	npixels  = img->width * img->height;
 	channels = img->channels;
 	if (channels == 2)
 		colorchannels = 1;
@@ -1360,29 +1564,38 @@ static void convert_gamma(double (*func)(double))
 	else
 		colorchannels = channels;
 
-	for (px = 0; px < npixels; px++) {
+	for (px = 0; px < npixels; px++)
+	{
 		size_t offs = px * channels;
-		for (int i = 0; i < colorchannels; i++) {
-			double   d = 0;
+		for (int i = 0; i < colorchannels; i++)
+		{
+			double d = 0;
 
-			switch(img->format) {
+			switch (img->format)
+			{
 			case BMP_FORMAT_FLOAT:
-				d = ((float*)img->buffer)[offs + i];
+				d = ((float *)img->buffer)[offs + i];
 				break;
+
 			case BMP_FORMAT_S2_13:
-				d = s2_13_to_double(((uint16_t*)img->buffer)[offs + i]);
+				d = s2_13_to_double(((uint16_t *)img->buffer)[offs + i]);
 				break;
+
 			case BMP_FORMAT_INT:
-				switch (img->bitsperchannel) {
+				switch (img->bitsperchannel)
+				{
 				case 8:
-					d = ((uint8_t*)img->buffer)[offs+i] / (double) 0xffU;
+					d = ((uint8_t *)img->buffer)[offs + i] / (double)0xffU;
 					break;
+
 				case 16:
-					d = ((uint16_t*)img->buffer)[offs+i] / (double) 0xffffU;
+					d = ((uint16_t *)img->buffer)[offs + i] / (double)0xffffU;
 					break;
+
 				case 32:
-					d = ((uint32_t*)img->buffer)[offs+i] / (double) 0xffffffffUL;
+					d = ((uint32_t *)img->buffer)[offs + i] / (double)0xffffffffUL;
 					break;
+
 				default:
 					printf("Waaaaaaaaaaaaaaa\n");
 					exit(1);
@@ -1392,24 +1605,33 @@ static void convert_gamma(double (*func)(double))
 
 			d = (*func)(d);
 
-			switch (img->format) {
+			switch (img->format)
+			{
 			case BMP_FORMAT_FLOAT:
-				((float*)img->buffer)[offs+i] = (float) d;
+				((float *)img->buffer)[offs + i] = (float)d;
 				break;
+
 			case BMP_FORMAT_S2_13:
-				((uint16_t*)img->buffer)[offs+i] = float_to_s2_13(d);
+				((uint16_t *)img->buffer)[offs + i] = float_to_s2_13(d);
 				break;
+
 			case BMP_FORMAT_INT:
-				switch (img->bitsperchannel) {
+				switch (img->bitsperchannel)
+				{
 				case 8:
-					((uint8_t*)img->buffer)[offs+i]  = d * (double) 0xffU + 0.5;
+					((uint8_t *)img->buffer)[offs + i] = d * (double)0xffU + 0.5;
 					break;
+
 				case 16:
-					((uint16_t*)img->buffer)[offs+i] = d * (double) 0xffffU + 0.5;
+					((uint16_t *)img->buffer)[offs + i] =
+					    d * (double)0xffffU + 0.5;
 					break;
+
 				case 32:
-					((uint32_t*)img->buffer)[offs+i] = d * (double) 0xffffffffUL + 0.5;
+					((uint32_t *)img->buffer)[offs + i] =
+					    d * (double)0xffffffffUL + 0.5;
 					break;
+
 				}
 				break;
 			}
@@ -1417,17 +1639,16 @@ static void convert_gamma(double (*func)(double))
 	}
 }
 
-
 static void set_exposure(double fstops)
 {
 	struct Image *img;
-	int channels, colorchannels;
+	int           channels, colorchannels;
 	size_t        px, npixels;
 
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	npixels = img->width * img->height;
+	npixels  = img->width * img->height;
 	channels = img->channels;
 	if (channels == 2)
 		colorchannels = 1;
@@ -1436,79 +1657,113 @@ static void set_exposure(double fstops)
 	else
 		colorchannels = channels;
 
-	for (px = 0; px < npixels; px++) {
+	for (px = 0; px < npixels; px++)
+	{
 		size_t offs = px * channels;
-		for (int c = 0; c < colorchannels; c++) {
-			double   d = 0;
+		for (int c = 0; c < colorchannels; c++)
+		{
+			double d = 0;
 
-			switch(img->format) {
+			switch (img->format)
+			{
 			case BMP_FORMAT_FLOAT:
-				d = ((float*)img->buffer)[offs + c];
+				d = ((float *)img->buffer)[offs + c];
 				break;
+
 			case BMP_FORMAT_S2_13:
-				d = s2_13_to_double(((int16_t*)img->buffer)[offs + c]);
+				d = s2_13_to_double(((int16_t *)img->buffer)[offs + c]);
 				break;
+
 			case BMP_FORMAT_INT:
-				switch (img->bitsperchannel) {
-				case 8:  d = (double) ( (uint8_t*)img->buffer)[offs + c] / ((1<< 8)-1);    break;
-				case 16: d = (double) ((uint16_t*)img->buffer)[offs + c] / ((1<<16)-1);    break;
-				case 32: d = (double) ((uint32_t*)img->buffer)[offs + c] / ((1ULL<<32)-1); break;
+				switch (img->bitsperchannel)
+				{
+				case 8:
+					d = (double)((uint8_t *)img->buffer)[offs + c] / ((1 << 8) - 1);
+					break;
+
+				case 16:
+					d = (double)((uint16_t *)img->buffer)[offs + c] / ((1 << 16) - 1);
+					break;
+
+				case 32:
+					d = (double)((uint32_t *)img->buffer)[offs + c] / ((1ULL << 32) - 1);
+					break;
 				}
 			}
 
 			d = d * pow(2, fstops);
 
-			switch (img->format) {
+			switch (img->format)
+			{
 			case BMP_FORMAT_FLOAT:
-				((float*)img->buffer)[offs+c] = (float) d;
+				((float *)img->buffer)[offs + c] = (float)d;
 				break;
+
 			case BMP_FORMAT_S2_13:
-				((uint16_t*)img->buffer)[offs+c] = float_to_s2_13(d);
+				((uint16_t *)img->buffer)[offs + c] = float_to_s2_13(d);
 				break;
+
 			case BMP_FORMAT_INT:
-				switch (img->bitsperchannel) {
-				case 8:  ( (uint8_t*)img->buffer)[offs + c] =  (uint8_t) (d * ((1<< 8)-1) + 0.5);    break;
-				case 16: ((uint16_t*)img->buffer)[offs + c] = (uint16_t) (d * ((1<<16)-1) + 0.5);    break;
-				case 32: ((uint32_t*)img->buffer)[offs + c] = (uint32_t) (d * ((1ULL<<32)-1) + 0.5); break;
+				switch (img->bitsperchannel)
+				{
+				case 8:
+					((uint8_t *)img->buffer)[offs + c] = (uint8_t)(d * ((1 << 8) - 1) + 0.5);
+					break;
+
+				case 16:
+					((uint16_t *)img->buffer)[offs + c] = (uint16_t)(d * ((1 << 16) - 1) + 0.5);
+					break;
+
+				case 32:
+					((uint32_t *)img->buffer)[offs + c] = (uint32_t)(d * ((1ULL << 32) - 1) + 0.5);
+					break;
 				}
 			}
 		}
 	}
 }
 
-
 static bool perform_convertformat(struct Argument *args)
 {
-	const char *to = NULL;
+	const char *to   = NULL;
 	int         bits = 0;
 
-	if (args) {
+	if (args)
+	{
 		to   = args->argname;
 		args = args->next;
 	}
-	if (args) {
+	if (args)
+	{
 		bits = atol(args->argname);
 		args = args->next;
 	}
 
-	if (!(to && *to)) {
+	if (!(to && *to))
+	{
 		printf("convertformat: need format\n");
 		return false;
 	}
 
-	if (!strcmp(to, "float")) {
+	if (!strcmp(to, "float"))
+	{
 		convert_format(BMP_FORMAT_FLOAT, 0);
-	} else if (!strcmp(to, "s2.13")) {
+	}
+	else if (!strcmp(to, "s2.13"))
+	{
 		convert_format(BMP_FORMAT_S2_13, 0);
-	} else if (!strcmp(to, "int")) {
+	}
+	else if (!strcmp(to, "int"))
+	{
 		convert_format(BMP_FORMAT_INT, bits);
-	} else {
+	}
+	else
+	{
 		printf("Unknown conversion to %s\n", to);
 		return false;
 	}
 	return true;
 }
-
 
 static void convert_format(BMPFORMAT format, int bits)
 {
@@ -1520,7 +1775,8 @@ static void convert_format(BMPFORMAT format, int bits)
 		bits = 32;
 	else if (format == BMP_FORMAT_S2_13)
 		bits = 16;
-	else if (!(bits == 8 || bits == 16 || bits == 32)) {
+	else if (!(bits == 8 || bits == 16 || bits == 32))
+	{
 		printf("convert: invalid bit-number: %d\n", bits);
 		exit(1);
 	}
@@ -1531,77 +1787,92 @@ static void convert_format(BMPFORMAT format, int bits)
 	if (img->format == format && img->bitsperchannel == bits)
 		return;
 
-	nvals = (size_t) img->width * img->height * img->channels;
+	nvals   = (size_t)img->width * img->height * img->channels;
 	newsize = nvals * bits / 8;
 
-	if (newsize > img->buffersize) {
-		if (!(tmp = realloc(img->buffer, newsize))) {
+	if (newsize > img->buffersize)
+	{
+		if (!(tmp = realloc(img->buffer, newsize)))
+		{
 			perror("realloc buffer for conv");
 			exit(1);
 		}
-		img->buffer = tmp;
+		img->buffer     = tmp;
 		img->buffersize = newsize;
 	}
 
-	for (size_t i = 0; i < nvals; i++) {
-		double   d = 0;
-		size_t   offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
+	for (size_t i = 0; i < nvals; i++)
+	{
+		double d    = 0;
+		size_t offs = img->bitsperchannel >= bits ? i : (nvals - i - 1);
 
-		switch (img->format) {
-		case BMP_FORMAT_FLOAT:
-			d = ((float*)img->buffer)[offs];
-			break;
+		switch (img->format)
+		{
+		case BMP_FORMAT_FLOAT: d = ((float *)img->buffer)[offs]; break;
 		case BMP_FORMAT_S2_13:
-			d = s2_13_to_double(((int16_t*)img->buffer)[offs]);
+			d = s2_13_to_double(((int16_t *)img->buffer)[offs]);
 			break;
+
 		case BMP_FORMAT_INT:
-			switch (img->bitsperchannel) {
+			switch (img->bitsperchannel)
+			{
 			case 8:
-				d = ((uint8_t*)img->buffer)[offs] / (double) 0xffU;
+				d = ((uint8_t *)img->buffer)[offs] / (double)0xffU;
 				break;
+
 			case 16:
-				d = ((uint16_t*)img->buffer)[offs] / (double) 0xffffU;
+				d = ((uint16_t *)img->buffer)[offs] / (double)0xffffU;
 				break;
+
 			case 32:
-				d = ((uint32_t*)img->buffer)[offs] / (double) 0xffffffffUL;
+				d = ((uint32_t *)img->buffer)[offs] / (double)0xffffffffUL;
 				break;
+
 			default:
 				printf("Waaaaaaaaaaaaaaa\n");
 				exit(1);
 			}
 		}
 
-		switch (format) {
+		switch (format)
+		{
 		case BMP_FORMAT_FLOAT:
-			((float*)img->buffer)[offs] = (float) d;
+			((float *)img->buffer)[offs] = (float)d;
 			break;
+
 		case BMP_FORMAT_S2_13:
-			((uint16_t*)img->buffer)[offs] = float_to_s2_13(d);
+			((uint16_t *)img->buffer)[offs] = float_to_s2_13(d);
 			break;
+
 		case BMP_FORMAT_INT:
-			switch (bits) {
+			switch (bits)
+			{
 			case 8:
-				((uint8_t*)img->buffer)[offs]  = (uint8_t) (d * (double) 0xffU + 0.5);
+				((uint8_t *)img->buffer)[offs] = (uint8_t)(d * (double)0xffU + 0.5);
 				break;
+
 			case 16:
-				((uint16_t*)img->buffer)[offs] = (uint16_t) (d * (double) 0xffffU + 0.5);
+				((uint16_t *)img->buffer)[offs] = (uint16_t)(d * (double)0xffffU + 0.5);
 				break;
+
 			case 32:
-				((uint32_t*)img->buffer)[offs] = (uint32_t) (d * (double) 0xffffffffUL + 0.5);
+				((uint32_t *)img->buffer)[offs] = (uint32_t)(d * (double)0xffffffffUL + 0.5);
 				break;
 			}
 		}
 	}
 
-	if (newsize < img->buffersize) {
+	if (newsize < img->buffersize)
+	{
 		tmp = realloc(img->buffer, newsize);
-		if (tmp) {
-			img->buffer = tmp;
+		if (tmp)
+		{
+			img->buffer     = tmp;
 			img->buffersize = newsize;
 		}
 	}
 	img->bitsperchannel = bits;
-	img->format = format;
+	img->format         = format;
 }
 
 static bool perform_invertpalette(void)
@@ -1611,34 +1882,37 @@ static bool perform_invertpalette(void)
 	if (!(img = imgstack_get(0)))
 		exit(1);
 
-	if (!(img->palette && img->numcolors > 1)) {
+	if (!(img->palette && img->numcolors > 1))
+	{
 		printf("invert-palette: image is not indexed\n");
 		exit(1);
 	}
 
-	for (int i = 0; i < img->numcolors / 2; i++) {
-		for (int j = 0; j < 4; j++) {
+	for (int i = 0; i < img->numcolors / 2; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
 			int tmp;
 			tmp = img->palette[4 * i + j];
-			img->palette[4 * i + j] = img->palette[4 * (img->numcolors - i - 1) + j];
+			img->palette[4 * i + j] =
+			    img->palette[4 * (img->numcolors - i - 1) + j];
 			img->palette[4 * (img->numcolors - i - 1) + j] = tmp;
 		}
 	}
 
-	for (size_t i = 0; i < (size_t)img->width * img->height; i++) {
+	for (size_t i = 0; i < (size_t)img->width * img->height; i++)
+	{
 		img->buffer[i] = img->numcolors - img->buffer[i] - 1;
 	}
 
 	return true;
 }
 
-
 static bool perform_delete(void)
 {
 	imgstack_delete();
 	return true;
 }
-
 
 static bool perform_compare(struct Argument *args)
 {
@@ -1647,82 +1921,101 @@ static bool perform_compare(struct Argument *args)
 	struct Image *img[2];
 	const char   *opt, *optval;
 
-	while (args && args->argname) {
+	while (args && args->argname)
+	{
 		opt    = args->argname;
 		optval = args->argvalue;
 
-		if (!strcmp(opt, "fuzz")) {
+		if (!strcmp(opt, "fuzz"))
+		{
 			fuzz = atol(optval);
-		} else {
+		}
+		else
+		{
 			printf("Warning: unknown option '%s' for compare\n", opt);
 		}
 		args = args->next;
 	}
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 2; i++)
+	{
 		img[i] = imgstack_get(i);
 		if (!img[i])
 			exit(1);
 	}
 
-	if(!(img[0]->width          == img[1]->width &&
-	     img[0]->height         == img[1]->height &&
-	     img[0]->channels       == img[1]->channels &&
-	     img[0]->bitsperchannel == img[1]->bitsperchannel)) {
+	if (!(img[0]->width == img[1]->width && img[0]->height == img[1]->height &&
+	      img[0]->channels == img[1]->channels &&
+	      img[0]->bitsperchannel == img[1]->bitsperchannel))
+	{
 		printf("compare: dimensions don't match: %dx%dx%d@%d vs %dx%dx%d@%d\n",
-		       img[0]->width, img[0]->height, img[0]->channels, img[0]->bitsperchannel,
-		       img[1]->width, img[1]->height, img[1]->channels, img[1]->bitsperchannel);
+		       img[0]->width, img[0]->height, img[0]->channels,
+		       img[0]->bitsperchannel, img[1]->width, img[1]->height,
+		       img[1]->channels, img[1]->bitsperchannel);
 		return false;
 	}
 
-	if (img[0]->format != img[1]->format && conf->verbose > -2) {
+	if (img[0]->format != img[1]->format && conf->verbose > -2)
+	{
 		printf("compare: Warning! Images have different pixel formats!\n");
 	}
 
 	size = (size_t)img[0]->width * img[0]->height * img[0]->channels;
 
-	for (off = 0; off < size; off++) {
-		switch (img[0]->bitsperchannel) {
+	for (off = 0; off < size; off++)
+	{
+		switch (img[0]->bitsperchannel)
+		{
 		case 8:
-			if (fuzz < abs(((uint8_t*)img[0]->buffer)[off] - ((uint8_t*)img[1]->buffer)[off])) {
-				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
-				        (unsigned) ((uint8_t*)img[0]->buffer)[off],
-				        (unsigned) ((uint8_t*)img[1]->buffer)[off],
-				        (unsigned) ((off / img[0]->channels) % img[0]->width),
-				        (unsigned) ((off / img[0]->channels) / img[0]->width));
+			if (fuzz < abs(((uint8_t *)img[0]->buffer)[off] -
+			               ((uint8_t *)img[1]->buffer)[off]))
+			{
+				printf(
+				    "compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				    (unsigned)((uint8_t *)img[0]->buffer)[off],
+				    (unsigned)((uint8_t *)img[1]->buffer)[off],
+				    (unsigned)((off / img[0]->channels) % img[0]->width),
+				    (unsigned)((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
 			break;
 
 		case 16:
-			if (fuzz < abs(((uint16_t*)img[0]->buffer)[off] - ((uint16_t*)img[1]->buffer)[off])) {
-				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
-				        (unsigned) ((uint16_t*)img[0]->buffer)[off],
-				        (unsigned) ((uint16_t*)img[1]->buffer)[off],
-				        (unsigned) ((off / img[0]->channels) % img[0]->width),
-				        (unsigned) ((off / img[0]->channels) / img[0]->width));
+			if (fuzz < abs(((uint16_t *)img[0]->buffer)[off] -
+			               ((uint16_t *)img[1]->buffer)[off]))
+			{
+				printf(
+				    "compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				    (unsigned)((uint16_t *)img[0]->buffer)[off],
+				    (unsigned)((uint16_t *)img[1]->buffer)[off],
+				    (unsigned)((off / img[0]->channels) % img[0]->width),
+				    (unsigned)((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
 			break;
 
 		case 32:
-			if (fuzz < llabs((long long)(((uint32_t*)img[0]->buffer)[off]) - (long long)(((uint32_t*)img[1]->buffer)[off]))) {
-				printf("compare: pixels don't match (%u vs %u @ %u,%u)\n",
-				        (unsigned) ((uint32_t*)img[0]->buffer)[off],
-				        (unsigned) ((uint32_t*)img[1]->buffer)[off],
-				        (unsigned) ((off / img[0]->channels) % img[0]->width),
-				        (unsigned) ((off / img[0]->channels) / img[0]->width));
+			if (fuzz < llabs((long long)(((uint32_t *)img[0]->buffer)[off]) -
+			                 (long long)(((uint32_t *)img[1]->buffer)[off])))
+			{
+				printf(
+				    "compare: pixels don't match (%u vs %u @ %u,%u)\n",
+				    (unsigned)((uint32_t *)img[0]->buffer)[off],
+				    (unsigned)((uint32_t *)img[1]->buffer)[off],
+				    (unsigned)((off / img[0]->channels) % img[0]->width),
+				    (unsigned)((off / img[0]->channels) / img[0]->width));
 				return false;
 			}
 			break;
+
 		default:
-			printf("Invalid bitsperchannel (%d) for comparison", img[0]->bitsperchannel);
+			printf("Invalid bitsperchannel (%d) for comparison",
+			       img[0]->bitsperchannel);
 			return false;
 		}
 	}
 	return true;
 }
-
 
 static bool perform_loadpng(struct Argument *args)
 {
@@ -1730,40 +2023,55 @@ static bool perform_loadpng(struct Argument *args)
 	const char   *dirpath;
 	char          path[1024];
 	FILE         *file = NULL;
-	struct Image *img = NULL;
+	struct Image *img  = NULL;
 
-	if (args) {
+	if (args)
+	{
 		dir  = args->argname;
 		args = args->next;
 	}
-	if (args) {
+	if (args)
+	{
 		fname = args->argname;
 		args  = args->next;
 	}
 
-	if (!(fname && *fname)) {
+	if (!(fname && *fname))
+	{
 		printf("loadpng: invalid filespec\n");
 		goto abort;
 	}
 
 	if (!strcmp(dir, "bmpsuite"))
+	{
 		dirpath = conf->bmpsuitedir;
+	}
 	else if (!strcmp(dir, "sample"))
+	{
 		dirpath = conf->sampledir;
+	}
 	else if (!strcmp(dir, "tmp"))
+	{
 		dirpath = conf->tmpdir;
+	}
 	else if (!strcmp(dir, "ref"))
+	{
 		dirpath = conf->refdir;
-	else {
+	}
+	else
+	{
 		printf("loadpng: Invalid dir '%s'", dir);
 		goto abort;
 	}
-	if ((int) sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname)) {
+
+	if ((int)sizeof path < snprintf(path, sizeof path, "%s/%s", dirpath, fname))
+	{
 		printf("path too small!");
 		exit(1);
 	}
 
-	if (!(file = fopen(path, "rb"))) {
+	if (!(file = fopen(path, "rb")))
+	{
 		perror(path);
 		goto abort;
 	}
@@ -1789,34 +2097,37 @@ abort:
 	return false;
 }
 
-
-static struct Image* pngfile_read(FILE *file)
+static struct Image *pngfile_read(FILE *file)
 {
-	struct Image * volatile img = NULL;
-	png_bytep    * volatile row_pointers = NULL;
-	png_structp    png_ptr = NULL;
-	png_infop      info_ptr = NULL;
-	png_uint_32    width, height;
-	int            bit_depth, color_type, interlace_method, compression_method, filter_method;
-	int            y;
+	struct Image *volatile img       = NULL;
+	png_bytep *volatile row_pointers = NULL;
+	png_structp png_ptr              = NULL;
+	png_infop   info_ptr             = NULL;
+	png_uint_32 width, height;
+	int bit_depth, color_type, interlace_method, compression_method, filter_method;
+	int y;
 
-	if (!(png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL))) {
+	if (!(png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL)))
+	{
 		printf("Couldn't create PNG read struct\n");
 		goto abort;
 	}
 
-	if (!(info_ptr = png_create_info_struct(png_ptr))) {
+	if (!(info_ptr = png_create_info_struct(png_ptr)))
+	{
 		printf("Couldn't create PNG info struct\n");
 		goto abort;
 	}
 
-	if (!(img = malloc(sizeof *img))) {
+	if (!(img = malloc(sizeof *img)))
+	{
 		perror("allocate png image");
 		goto abort;
 	}
 	memset(img, 0, sizeof *img);
 
-	if (setjmp(png_jmpbuf(png_ptr))) {
+	if (setjmp(png_jmpbuf(png_ptr)))
+	{
 		printf("PNG reading failed\n");
 		goto abort;
 	}
@@ -1825,80 +2136,76 @@ static struct Image* pngfile_read(FILE *file)
 
 	png_read_info(png_ptr, info_ptr);
 
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_method,
-	             &compression_method, &filter_method);
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+	             &interlace_method, &compression_method, &filter_method);
 
-	if (bit_depth < 8) {
-		if (color_type == PNG_COLOR_TYPE_PALETTE ||
-		    color_type == PNG_COLOR_TYPE_GRAY ||
+	if (bit_depth < 8)
+	{
+		if (color_type == PNG_COLOR_TYPE_PALETTE || color_type == PNG_COLOR_TYPE_GRAY ||
 		    png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
 			png_set_expand(png_ptr);
 		else
 			png_set_packing(png_ptr);
 	}
 
-	switch (color_type) {
+	switch (color_type)
+	{
 	case PNG_COLOR_TYPE_PALETTE:
 		png_set_palette_to_rgb(png_ptr); /* == png_set_expand */
 		img->channels = 3;
 		break;
 
-	case PNG_COLOR_TYPE_GRAY:
-		img->channels = 1;
-		break;
+	case PNG_COLOR_TYPE_GRAY      : img->channels = 1; break;
 
-	case PNG_COLOR_TYPE_GRAY_ALPHA:
-		img->channels = 2;
-		break;
+	case PNG_COLOR_TYPE_GRAY_ALPHA: img->channels = 2; break;
 
-	case PNG_COLOR_TYPE_RGB_ALPHA:
-		img->channels = 4;
-		break;
+	case PNG_COLOR_TYPE_RGB_ALPHA : img->channels = 4; break;
 
-	case PNG_COLOR_TYPE_RGB:
-		img->channels = 3;
-		break;
+	case PNG_COLOR_TYPE_RGB       : img->channels = 3; break;
 
-	default:
-		printf("Invalid PNG color type!\n");
-		goto abort;
+	default                       : printf("Invalid PNG color type!\n"); goto abort;
 	}
 
 	png_set_interlace_handling(png_ptr);
 
 	png_read_update_info(png_ptr, info_ptr);
 
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_method,
-	             &compression_method, &filter_method);
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+	             &interlace_method, &compression_method, &filter_method);
 
-	if (!(bit_depth == 8 || bit_depth == 16)) {
+	if (!(bit_depth == 8 || bit_depth == 16))
+	{
 		printf("Invalid bit depth: %d\n", bit_depth);
 		goto abort;
 	}
 
-	if (width > INT_MAX || height > INT_MAX) {
-		printf("Invalid PNG dimensions %lux%lu\n", (unsigned long) width,
-		                                           (unsigned long) height);
+	if (width > INT_MAX || height > INT_MAX)
+	{
+		printf("Invalid PNG dimensions %lux%lu\n", (unsigned long)width,
+		       (unsigned long)height);
 		goto abort;
 	}
 	img->bitsperchannel = bit_depth;
-	img->width          = (int) width;
-	img->height         = (int) height;
+	img->width          = (int)width;
+	img->height         = (int)height;
 
-	if (!(row_pointers = malloc(height * sizeof *row_pointers))) {
+	if (!(row_pointers = malloc(height * sizeof *row_pointers)))
+	{
 		perror("Allocating memory for PNG row pointers");
 		goto abort;
 	}
 	memset(row_pointers, 0, height * sizeof *row_pointers);
 
 	img->buffersize = width * height * img->channels * (bit_depth / 8);
-	if (!(img->buffer = malloc(img->buffersize))) {
+	if (!(img->buffer = malloc(img->buffersize)))
+	{
 		perror("allocate PNG buffer");
 		goto abort;
 	}
 	memset(img->buffer, 0, img->buffersize);
 
-	for (y = 0; y < (int)height; y++) {
+	for (y = 0; y < (int)height; y++)
+	{
 		row_pointers[y] = img->buffer + y * width * img->channels * (bit_depth / 8);
 	}
 
@@ -1910,27 +2217,29 @@ static struct Image* pngfile_read(FILE *file)
 
 	free(row_pointers);
 
-	if (bit_depth == 16) {
+	if (bit_depth == 16)
+	{
 		int      lobyte, hibyte;
 		uint16_t val;
 		size_t   pixels = width * height * img->channels;
 
-		for (size_t off = 0; off/2 < pixels; off += 2) {
+		for (size_t off = 0; off / 2 < pixels; off += 2)
+		{
 			hibyte = img->buffer[off];
-			lobyte = img->buffer[off+1];
-			val = (hibyte << 8) + lobyte;
-			*((uint16_t*)(img->buffer+off)) = val;
+			lobyte = img->buffer[off + 1];
+			val    = (hibyte << 8) + lobyte;
+			*((uint16_t *)(img->buffer + off)) = val;
 		}
 	}
-
 
 	return img;
 
 abort:
-	if (img) {
+	if (img)
+	{
 		if (img->buffer)
 			free(img->buffer);
-		free (img);
+		free(img);
 	}
 
 	if (png_ptr)
@@ -1963,9 +2272,10 @@ static inline uint16_t float_to_s2_13(double d)
 		u16 = 0x8000;
 	else if (d >= 4.0)
 		u16 = 0x7fff;
-	else {
+	else
+	{
 		d   = round(d * 8192.0);
-		u16 = (uint16_t) (0xffff & (int32_t)d);
+		u16 = (uint16_t)(0xffff & (int32_t)d);
 	}
 	return u16;
 }
@@ -1977,42 +2287,28 @@ static inline double s2_13_to_double(uint16_t s2_13)
 
 bool bmpresult_from_str(const char *str, BMPRESULT *res)
 {
-	if (!strcmp(str, "BMP_RESULT_OK"))
-		*res = BMP_RESULT_OK;
-	else if (!strcmp(str, "BMP_RESULT_INVALID"))
-		*res = BMP_RESULT_INVALID;
-	else if (!strcmp(str, "BMP_RESULT_TRUNCATED"))
-		*res = BMP_RESULT_TRUNCATED;
-	else if (!strcmp(str, "BMP_RESULT_INSANE"))
-		*res = BMP_RESULT_INSANE;
-	else if (!strcmp(str, "BMP_RESULT_PNG"))
-		*res = BMP_RESULT_PNG;
-	else if (!strcmp(str, "BMP_RESULT_JPEG"))
-		*res = BMP_RESULT_JPEG;
-	else if (!strcmp(str, "BMP_RESULT_ERROR"))
-		*res = BMP_RESULT_ERROR;
+	if (!strcmp(str, "BMP_RESULT_OK"))             *res = BMP_RESULT_OK;
+	else if (!strcmp(str, "BMP_RESULT_INVALID"))   *res = BMP_RESULT_INVALID;
+	else if (!strcmp(str, "BMP_RESULT_TRUNCATED")) *res = BMP_RESULT_TRUNCATED;
+	else if (!strcmp(str, "BMP_RESULT_INSANE"))    *res = BMP_RESULT_INSANE;
+	else if (!strcmp(str, "BMP_RESULT_PNG"))       *res = BMP_RESULT_PNG;
+	else if (!strcmp(str, "BMP_RESULT_JPEG"))      *res = BMP_RESULT_JPEG;
+	else if (!strcmp(str, "BMP_RESULT_ERROR"))     *res = BMP_RESULT_ERROR;
 	else
 		return false;
 
 	return true;
 }
-
 
 bool rendering_intent_from_str(const char *str, BMPINTENT *intent)
 {
-	if (!strcmp(str, "NONE"))
-		*intent = BMP_INTENT_NONE;
-	else if (!strcmp(str, "BUSINESS"))
-		*intent = BMP_INTENT_BUSINESS;
-	else if (!strcmp(str, "GRAPHICS"))
-		*intent = BMP_INTENT_GRAPHICS;
-	else if (!strcmp(str, "IMAGES"))
-		*intent = BMP_INTENT_IMAGES;
-	else if (!strcmp(str, "ABS"))
-		*intent = BMP_INTENT_ABS_COLORIMETRIC;
+	if (!strcmp(str, "NONE"))          *intent = BMP_INTENT_NONE;
+	else if (!strcmp(str, "BUSINESS")) *intent = BMP_INTENT_BUSINESS;
+	else if (!strcmp(str, "GRAPHICS")) *intent = BMP_INTENT_GRAPHICS;
+	else if (!strcmp(str, "IMAGES"))   *intent = BMP_INTENT_IMAGES;
+	else if (!strcmp(str, "ABS"))      *intent = BMP_INTENT_ABS_COLORIMETRIC;
 	else
 		return false;
 
 	return true;
 }
-

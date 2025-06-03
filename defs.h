@@ -17,16 +17,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-#define ARRAY_SIZE(a) (sizeof (a) / sizeof (a)[0])
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a)[0])
 
-#define ALIGN_TO_POINTER(a)  (((a) + (sizeof(void*) - 1)) & (~(sizeof(void*) - 1)))
+#define ALIGN_TO_POINTER(a)                                      \
+	(((a) + (sizeof(void *) - 1)) & (~(sizeof(void *) - 1)))
 
 #if defined(__GNUC__)
-	#define MAY_BE_UNUSED __attribute__((unused))
+#define MAY_BE_UNUSED __attribute__((unused))
 #else
-	#define MAY_BE_UNUSED
+#define MAY_BE_UNUSED
 #endif

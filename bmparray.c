@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -28,23 +27,24 @@
 
 #define DESCR_WIDTH 20
 
-
-const char* bmtype_descr(BMPIMAGETYPE type);
-
+const char *bmtype_descr(BMPIMAGETYPE type);
 
 int main(int argc, char **argv)
 {
-	FILE               *file = NULL;
-	BMPHANDLE           h;
+	FILE     *file = NULL;
+	BMPHANDLE h;
 
-	if (argc < 2) {
+	if (argc < 2)
+	{
 		printf("Usage: bmparray <bmp-file>\n");
 		return 1;
 	}
 
 	bool ret = true;
-	for (int i = 1; i < argc; i++) {
-		if (!(file = fopen(argv[i], "rb"))) {
+	for (int i = 1; i < argc; i++)
+	{
+		if (!(file = fopen(argv[i], "rb")))
+		{
 			perror(argv[i]);
 			ret = false;
 			break;
@@ -52,14 +52,16 @@ int main(int argc, char **argv)
 
 		printf("\n--- %s ---\n", argv[i]);
 
-		if (!(h = bmpread_new(file))) {
+		if (!(h = bmpread_new(file)))
+		{
 			fprintf(stderr, "Failed to get bmp handle\n");
 			fclose(file);
 			ret = false;
 			continue;
 		}
 
-		if (BMP_RESULT_ARRAY != bmpread_load_info(h)) {
+		if (BMP_RESULT_ARRAY != bmpread_load_info(h))
+		{
 			fprintf(stderr, "Not a BMP array (BA)\n");
 			bmp_free(h);
 			fclose(file);
@@ -69,10 +71,12 @@ int main(int argc, char **argv)
 
 		int n = bmpread_array_num(h);
 
-		for (int j = 0; j < n; j++) {
+		for (int j = 0; j < n; j++)
+		{
 			struct BmpArrayInfo ai = { 0 };
 
-			if (BMP_RESULT_OK != bmpread_array_info(h, &ai, j)) {
+			if (BMP_RESULT_OK != bmpread_array_info(h, &ai, j))
+			{
 				fprintf(stderr, "%s\n", bmp_errmsg(h));
 				continue;
 			}
@@ -90,22 +94,19 @@ int main(int argc, char **argv)
 		file = NULL;
 	}
 	return !ret;
-
 }
 
-
-const char* bmtype_descr(BMPIMAGETYPE type)
+const char *bmtype_descr(BMPIMAGETYPE type)
 {
-	switch (type) {
-	case BMP_IMAGETYPE_BM: return "Windows or OS/2 BMP [BM]";
-	case BMP_IMAGETYPE_BA: return "OS/2 bitmap array [BA]";
-	case BMP_IMAGETYPE_CI: return "OS/2 color icon [CI]";
-	case BMP_IMAGETYPE_CP: return "OS/2 color pointer [CP]";
-	case BMP_IMAGETYPE_IC: return "OS/2 icon (b/w) [IC]";
-	case BMP_IMAGETYPE_PT: return "OS/2 pointer (b/w) [PT]";
+	switch (type)
+	{
+	case BMP_IMAGETYPE_BM  : return "Windows or OS/2 BMP [BM]";
+	case BMP_IMAGETYPE_BA  : return "OS/2 bitmap array [BA]";
+	case BMP_IMAGETYPE_CI  : return "OS/2 color icon [CI]";
+	case BMP_IMAGETYPE_CP  : return "OS/2 color pointer [CP]";
+	case BMP_IMAGETYPE_IC  : return "OS/2 icon (b/w) [IC]";
+	case BMP_IMAGETYPE_PT  : return "OS/2 pointer (b/w) [PT]";
 	case BMP_IMAGETYPE_NONE: return "not specified";
-	default: return "(unknown)";
+	default                : return "(unknown)";
 	}
 }
-
-

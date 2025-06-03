@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -25,7 +24,6 @@
 #include <bmplib.h>
 
 #include "imgstack.h"
-
 
 static struct Image **imgstack  = NULL;
 static int            imgcount  = 0;
@@ -38,9 +36,11 @@ bool imgstack_push(struct Image *img)
 	size_t         newsize;
 	struct Image **tmp;
 
-	if (stacksize < (imgcount+1) * sizeof *imgstack) {
+	if (stacksize < (imgcount + 1) * sizeof *imgstack)
+	{
 		newsize = stacksize + alloc_step * sizeof *imgstack;
-		if (!(tmp = realloc(imgstack, newsize))) {
+		if (!(tmp = realloc(imgstack, newsize)))
+		{
 			perror("realloc imgstack");
 			return false;
 		}
@@ -52,28 +52,29 @@ bool imgstack_push(struct Image *img)
 	return true;
 }
 
-
 bool imgstack_swap(void)
 {
 	struct Image *tmp;
 
-	if (imgcount < 2) {
+	if (imgcount < 2)
+	{
 		printf("Trying to swap with fewer than 2 images (%d) on the stack!\n", imgcount);
 		return false;
 	}
 
-	tmp = imgstack[imgcount - 2];
+	tmp                    = imgstack[imgcount - 2];
 	imgstack[imgcount - 2] = imgstack[imgcount - 1];
 	imgstack[imgcount - 1] = tmp;
 
 	return true;
 }
 
-struct Image* imgstack_get(int pos)
+struct Image *imgstack_get(int pos)
 {
 	/* pos: 0 == last, 1 == before last... */
 
-	if (pos >= imgcount) {
+	if (pos >= imgcount)
+	{
 		printf("\nimgstack: invalid pos %d. (stack count=%d)\n", pos, imgcount);
 		return NULL;
 	}
@@ -83,7 +84,8 @@ struct Image* imgstack_get(int pos)
 
 void imgstack_delete(void)
 {
-	if (imgcount < 1) {
+	if (imgcount < 1)
+	{
 		printf("imgastack: called delete() on empty stack\n");
 		return;
 	}
@@ -91,19 +93,19 @@ void imgstack_delete(void)
 	imgcount--;
 }
 
-
 void imgstack_clear(void)
 {
-	while (imgcount > 0) {
+	while (imgcount > 0)
+	{
 		imgstack_delete();
 	}
 }
 
-
 void imgstack_destroy(void)
 {
 	imgstack_clear();
-	if (imgstack) {
+	if (imgstack)
+	{
 		free(imgstack);
 		imgstack = NULL;
 	}
@@ -111,7 +113,8 @@ void imgstack_destroy(void)
 
 void img_free(struct Image *img)
 {
-	if (img) {
+	if (img)
+	{
 		if (img->buffer)
 			free(img->buffer);
 		if (img->palette)

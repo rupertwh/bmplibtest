@@ -43,7 +43,7 @@ BitFieldColonSpacing: After
 
 BreakAfterReturnType: Automatic
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Linux
+BreakBeforeBraces: Allman
 BreakBeforeTernaryOperators: false
 BreakStringLiterals: false
 IndentWidth: 8
@@ -54,7 +54,7 @@ SpaceBeforeParens: ControlStatements
 SpaceAfterLogicalNot: false
 SpaceAfterCStyleCast: false
 
-ColumnLimit: 80
+ColumnLimit: 90
 PenaltyBreakAssignment: 60
 PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakOpenParenthesis: 40

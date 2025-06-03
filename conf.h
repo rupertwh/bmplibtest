@@ -18,12 +18,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-struct Confstr {
+struct Confstr
+{
 	struct Confstr *next;
 	char            str[1];
 };
 
-struct Conf {
+struct Conf
+{
 	int             verbose;
 	char           *bmpsuitedir;
 	char           *sampledir;
@@ -38,6 +40,6 @@ struct Conf {
 	struct Confstr *strlist;
 };
 
-struct Conf* conf_parse_cmdline(int argc, char **argv);
-void conf_free(struct Conf *cmdline);
-void conf_usage(void);
+struct Conf *conf_parse_cmdline(int argc, char **argv);
+void         conf_free(struct Conf *cmdline);
+void         conf_usage(void);
