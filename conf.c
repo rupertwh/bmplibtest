@@ -414,19 +414,42 @@ static int estimate_size(int argc, char **argv)
 	return total_size;
 }
 
+
+static int s_find_opt_by_longname(const char *name, int len)
+{
+	for (int i = 0; i < (int) (sizeof s_options / sizeof s_options[0]); i++)
+	{
+		if (s_options[i].longname && strict_strcmp(name, s_options[i].longname,
+		                             MAX(len, capped_strlen(s_options[i].longname))))
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+static int s_find_opt_by_shortname(int cname)
+{
+	for (int i = 0; i < (int) (sizeof s_options / sizeof s_options[0]); i++)
+	{
+		if (s_options[i].shortname == cname)
+			return i;
+	}
+	return -1;
+}
+
+
+
 /********************************************************
  * 	conf_parse_cmdline
  *******************************************************/
 
 struct Conf *conf_parse_cmdline(int argc, char **argv)
 {
-	const char      *arg = NULL, *equalsign;
-	int              i, op;
+	const char      *arg = NULL;
+	int              op;
 	bool             rest_is_args = false;
-	static const int opnum        = ARRAY_SIZE(s_options);
-	int              comparelen;
-	size_t           eqlen = 0;
-	struct Conf     *cmdline;
+	struct Conf     *conf;
 
 	s_current_arg = 0;
 	s_argc        = argc;
@@ -440,13 +463,13 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 		return NULL;
 	}
 	memset(s_buffer, 0, s_size);
-	cmdline = (struct Conf *)s_buffer;
-	s_used += sizeof *cmdline;
+	conf = (struct Conf *)s_buffer;
+	s_used += sizeof *conf;
 
-	s_listtail = &cmdline->strlist;
+	s_listtail = &conf->strlist;
 
-	load_default_strings(cmdline);
-	load_env_strings(cmdline);
+	load_default_strings(conf);
+	load_env_strings(conf);
 
 	while (next_arg(&arg))
 	{
@@ -464,32 +487,25 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					rest_is_args = true;
 					continue;
 				}
-				equalsign = strchr(arg, '=');
+
+				int         comparelen;
+				const char *equalsign = strchr(arg, '=');
 				if (equalsign)
 				{
-					eqlen = equalsign - arg;
-					if (eqlen > (size_t)INT_MAX / 2)
+					size_t optlen = equalsign - arg;
+					if (optlen > (size_t)INT_MAX / 2)
 					{
 						fprintf(stderr, "option name way too long\n");
 						goto abort;
 					}
-					comparelen = (int)eqlen;
+					comparelen = (int)optlen;
 				}
 				else
 				{
 					comparelen = capped_strlen(arg);
 				}
 
-				for (i = 0, op = opnum; i < opnum; i++)
-				{
-					if (s_options[i].longname && strict_strcmp(arg, s_options[i].longname,
-					                             MAX(comparelen, capped_strlen(s_options[i].longname))))
-					{
-						op = i;
-						break;
-					}
-				}
-				if (op == opnum)
+				if (-1 == (op = s_find_opt_by_longname(arg, comparelen)))
 				{
 					fprintf(stderr, "Unknown option --%s\n", arg);
 					goto abort;
@@ -505,7 +521,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					}
 					arg = equalsign + 1;
 
-					if (!do_opt_arg(arg, op, cmdline))
+					if (!do_opt_arg(arg, op, conf))
 						goto abort;
 				}
 				else
@@ -517,7 +533,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 						goto abort;
 					}
 
-					if (!do_opt(op, cmdline))
+					if (!do_opt(op, conf))
 						goto abort;
 				}
 			}
@@ -526,15 +542,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 				/*short option(s) */
 				while (*arg)
 				{
-					for (i = 0, op = opnum; i < opnum; i++)
-					{
-						if (s_options[i].shortname == *(unsigned char*)arg)
-						{
-							op = i;
-							break;
-						}
-					}
-					if (opnum == op)
+					if (-1 == (op = s_find_opt_by_shortname(*(unsigned char*)arg)))
 					{
 						fprintf(stderr, "Unknown option -%c\n", *(unsigned char*)arg);
 						goto abort;
@@ -552,13 +560,13 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 								goto abort;
 							}
 						}
-						if (!do_opt_arg(arg, op, cmdline))
+						if (!do_opt_arg(arg, op, conf))
 							goto abort;
-						break; /* no more options after an arg */
+						break; /* no more options after an argument */
 					}
 					else
 					{
-						if (!do_opt(op, cmdline))
+						if (!do_opt(op, conf))
 							goto abort;
 					}
 				}
@@ -574,10 +582,10 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 
 	/* printf("Cmdline: allocated %lu, used %lu\n", (unsigned long)s_size, (unsigned long)s_used); */
 
-	return cmdline;
+	return conf;
 
 abort:
-	conf_free(cmdline);
+	conf_free(conf);
 	return NULL;
 }
 
