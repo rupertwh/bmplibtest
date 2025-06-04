@@ -49,7 +49,7 @@ struct Option
 	const enum Optnum op;
 	const int         shortname;
 	const char       *longname;
-	const bool        has_arg;
+	const bool        has_value;
 	const char       *defaultstr;
 	const char       *envname;
 } s_options[] = {
@@ -70,7 +70,7 @@ static int                shortname(enum Optnum op);
 static const char        *longname(enum Optnum op);
 static const char        *envname(enum Optnum op);
 static void               print_option(enum Optnum op);
-static void print_option_with_arg(enum Optnum op, const char *argdescr);
+static void print_option_with_value(enum Optnum op, const char *argdescr);
 
 /********************************************************
  * 	do_opt
@@ -80,45 +80,45 @@ static void print_option_with_arg(enum Optnum op, const char *argdescr);
  *	E.g. "-p", "--yes"
  *******************************************************/
 
-static bool do_opt(int op, struct Conf *cmdline)
+static bool do_opt(int op, struct Conf *conf)
 {
 	switch (s_options[op].op)
 	{
 	case OP_VERBOSE:
-		cmdline->verbose++;
+		conf->verbose++;
 		break;
 
 	case OP_QUIET:
-		cmdline->verbose--;
+		conf->verbose--;
 		break;
 
 	case OP_HELP:
-		cmdline->help = true;
+		conf->help = true;
 		break;
 
 	case OP_DUMP:
-		cmdline->dump = true;
+		conf->dump = true;
 		break;
 
 	case OP_PRETTY:
-		cmdline->pretty = true;
+		conf->pretty = true;
 		break;
 
 	default:
-		printf("Something is boken\n");
+		printf("Something is broken\n");
 		exit(1);
 	}
 	return true;
 }
 
 /********************************************************
- * 	do_opt_arg
+ * 	do_opt_value
  *
- * 	Handle options that have an argument.
+ * 	Handle options that have an argument (=value).
  * 	E.g. "-f filename", "--mode=release"
  *******************************************************/
 
-static bool do_opt_arg(const char *arg, int op, struct Conf *cmdline)
+static bool do_opt_value(const char *arg, int op, struct Conf *conf)
 {
 	char *endptr = NULL;
 
@@ -132,27 +132,27 @@ static bool do_opt_arg(const char *arg, int op, struct Conf *cmdline)
 	switch (s_options[op].op)
 	{
 	case OP_TESTFILE:
-		add_opt_str(&cmdline->testfile, arg);
+		add_opt_str(&conf->testfile, arg);
 		break;
 
 	case OP_BMPSUITEDIR:
-		add_opt_str(&cmdline->bmpsuitedir, arg);
+		add_opt_str(&conf->bmpsuitedir, arg);
 		break;
 
 	case OP_SAMPLEDIR:
-		add_opt_str(&cmdline->sampledir, arg);
+		add_opt_str(&conf->sampledir, arg);
 		break;
 
 	case OP_REFDIR:
-		add_opt_str(&cmdline->refdir, arg);
+		add_opt_str(&conf->refdir, arg);
 		break;
 
 	case OP_TMPDIR:
-		add_opt_str(&cmdline->tmpdir, arg);
+		add_opt_str(&conf->tmpdir, arg);
 		break;
 
 	default:
-		printf("Something is boken\n");
+		printf("Something is broken\n");
 		exit(1);
 	}
 
@@ -170,7 +170,7 @@ static bool do_opt_arg(const char *arg, int op, struct Conf *cmdline)
  * 	load_env_strings
  *******************************************************/
 
-static void load_env_strings(struct Conf *cmdline)
+static void load_env_strings(struct Conf *conf)
 {
 	char *str;
 
@@ -184,23 +184,23 @@ static void load_env_strings(struct Conf *cmdline)
 		switch (s_options[i].op)
 		{
 		case OP_TESTFILE:
-			add_opt_str(&cmdline->testfile, str);
+			add_opt_str(&conf->testfile, str);
 			break;
 
 		case OP_BMPSUITEDIR:
-			add_opt_str(&cmdline->bmpsuitedir, str);
+			add_opt_str(&conf->bmpsuitedir, str);
 			break;
 
 		case OP_SAMPLEDIR:
-			add_opt_str(&cmdline->sampledir, str);
+			add_opt_str(&conf->sampledir, str);
 			break;
 
 		case OP_REFDIR:
-			add_opt_str(&cmdline->refdir, str);
+			add_opt_str(&conf->refdir, str);
 			break;
 
 		case OP_TMPDIR:
-			add_opt_str(&cmdline->tmpdir, str);
+			add_opt_str(&conf->tmpdir, str);
 			break;
 
 		default:
@@ -214,7 +214,7 @@ static void load_env_strings(struct Conf *cmdline)
  * 	load_default_strings
  *******************************************************/
 
-static void load_default_strings(struct Conf *cmdline)
+static void load_default_strings(struct Conf *conf)
 {
 
 	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++)
@@ -225,23 +225,23 @@ static void load_default_strings(struct Conf *cmdline)
 		switch (s_options[i].op)
 		{
 		case OP_TESTFILE:
-			add_opt_str(&cmdline->testfile, s_options[i].defaultstr);
+			add_opt_str(&conf->testfile, s_options[i].defaultstr);
 			break;
 
 		case OP_BMPSUITEDIR:
-			add_opt_str(&cmdline->bmpsuitedir, s_options[i].defaultstr);
+			add_opt_str(&conf->bmpsuitedir, s_options[i].defaultstr);
 			break;
 
 		case OP_SAMPLEDIR:
-			add_opt_str(&cmdline->sampledir, s_options[i].defaultstr);
+			add_opt_str(&conf->sampledir, s_options[i].defaultstr);
 			break;
 
 		case OP_REFDIR:
-			add_opt_str(&cmdline->refdir, s_options[i].defaultstr);
+			add_opt_str(&conf->refdir, s_options[i].defaultstr);
 			break;
 
 		case OP_TMPDIR:
-			add_opt_str(&cmdline->tmpdir, s_options[i].defaultstr);
+			add_opt_str(&conf->tmpdir, s_options[i].defaultstr);
 			break;
 
 		default:
@@ -273,20 +273,20 @@ void conf_usage(void)
 	printf("\t(Try -v, -d, or -p in order to find the test numbers.)\n");
 	printf("\nOptions:\n");
 
-	print_option_with_arg(OP_TESTFILE, "file");
+	print_option_with_value(OP_TESTFILE, "file");
 	printf("\t\tText file with test definitions.\n\n");
 
-	print_option_with_arg(OP_BMPSUITEDIR, "bmpsuite-dir");
+	print_option_with_value(OP_BMPSUITEDIR, "bmpsuite-dir");
 	printf("\t\tDirectory with BMP Suite sample images in g/, q/, b/ subdirs.\n");
 	printf("\t\t(see https://entropymine.com/jason/bmpsuite/)\n\n");
 
-	print_option_with_arg(OP_SAMPLEDIR, "sample-dir");
+	print_option_with_value(OP_SAMPLEDIR, "sample-dir");
 	printf("\t\tDirectory with sample images.\n\n");
 
-	print_option_with_arg(OP_REFDIR, "refs-dir");
+	print_option_with_value(OP_REFDIR, "refs-dir");
 	printf("\t\tDirectory with reference images.\n\n");
 
-	print_option_with_arg(OP_TMPDIR, "tmp-dir");
+	print_option_with_value(OP_TMPDIR, "tmp-dir");
 	printf("\t\tDirectory where output images will be written.\n\n");
 
 	print_option(OP_VERBOSE);
@@ -308,22 +308,22 @@ void conf_usage(void)
  * 	conf_free
  *******************************************************/
 
-void conf_free(struct Conf *cmdline)
+void conf_free(struct Conf *conf)
 {
-	if (!cmdline)
+	if (!conf)
 		return;
-	if (cmdline->testfile)
-		free(cmdline->testfile);
-	if (cmdline->bmpsuitedir)
-		free(cmdline->bmpsuitedir);
-	if (cmdline->sampledir)
-		free(cmdline->sampledir);
-	if (cmdline->refdir)
-		free(cmdline->refdir);
-	if (cmdline->tmpdir)
-		free(cmdline->tmpdir);
+	if (conf->testfile)
+		free(conf->testfile);
+	if (conf->bmpsuitedir)
+		free(conf->bmpsuitedir);
+	if (conf->sampledir)
+		free(conf->sampledir);
+	if (conf->refdir)
+		free(conf->refdir);
+	if (conf->tmpdir)
+		free(conf->tmpdir);
 
-	free(cmdline);
+	free(conf);
 }
 
 /*
@@ -355,10 +355,10 @@ static void print_option(enum Optnum op)
 }
 
 /********************************************************
- * 	print_option_with_arg
+ * 	print_option_with_value
  *******************************************************/
 
-static void print_option_with_arg(enum Optnum op, const char *argdescr)
+static void print_option_with_value(enum Optnum op, const char *argdescr)
 {
 	const char *env = envname(op);
 
@@ -438,7 +438,59 @@ static int s_find_opt_by_shortname(int cname)
 	return -1;
 }
 
+static bool s_parse_longoption(const char *arg, struct Conf *conf)
+{
+	int         op, comparelen;
+	const char *equalsign = strchr(arg, '=');
 
+	if (equalsign)
+	{
+		size_t optlen = equalsign - arg;
+		if (optlen > (size_t)INT_MAX / 2)
+		{
+			fprintf(stderr, "option name way too long\n");
+			return false;
+		}
+		comparelen = (int)optlen;
+	}
+	else
+	{
+		comparelen = capped_strlen(arg);
+	}
+
+	if (-1 == (op = s_find_opt_by_longname(arg, comparelen)))
+	{
+		fprintf(stderr, "Unknown option --%s\n", arg);
+		return false;
+	}
+
+	if (s_options[op].has_value)
+	{
+		/* long option with argument */
+		if (!equalsign)
+		{
+			fprintf(stderr, "Option --%s needs an argument!\n", s_options[op].longname);
+			return false;
+		}
+		arg = equalsign + 1;
+
+		if (!do_opt_value(arg, op, conf))
+			return false;
+	}
+	else
+	{
+		/* long option without argument */
+		if (equalsign)
+		{
+			fprintf(stderr, "Option --%s cannot have an argument!\n", s_options[op].longname);
+			return false;
+		}
+
+		if (!do_opt(op, conf))
+			return false;
+	}
+	return true;
+}
 
 /********************************************************
  * 	conf_parse_cmdline
@@ -475,7 +527,6 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 	{
 		if ('-' == *arg && !rest_is_args)
 		{
-			/* short or long option */
 			arg++;
 			if ('-' == *arg)
 			{
@@ -488,54 +539,8 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					continue;
 				}
 
-				int         comparelen;
-				const char *equalsign = strchr(arg, '=');
-				if (equalsign)
-				{
-					size_t optlen = equalsign - arg;
-					if (optlen > (size_t)INT_MAX / 2)
-					{
-						fprintf(stderr, "option name way too long\n");
+				if (!s_parse_longoption(arg, conf))
 						goto abort;
-					}
-					comparelen = (int)optlen;
-				}
-				else
-				{
-					comparelen = capped_strlen(arg);
-				}
-
-				if (-1 == (op = s_find_opt_by_longname(arg, comparelen)))
-				{
-					fprintf(stderr, "Unknown option --%s\n", arg);
-					goto abort;
-				}
-
-				if (s_options[op].has_arg)
-				{
-					/* long option with argument */
-					if (!equalsign)
-					{
-						fprintf(stderr, "Option --%s needs an argument!\n", s_options[op].longname);
-						goto abort;
-					}
-					arg = equalsign + 1;
-
-					if (!do_opt_arg(arg, op, conf))
-						goto abort;
-				}
-				else
-				{
-					/* long option without argument */
-					if (equalsign)
-					{
-						fprintf(stderr, "Option --%s cannot have an argument!\n", s_options[op].longname);
-						goto abort;
-					}
-
-					if (!do_opt(op, conf))
-						goto abort;
-				}
 			}
 			else
 			{
@@ -549,7 +554,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					}
 
 					arg++;
-					if (s_options[op].has_arg)
+					if (s_options[op].has_value)
 					{
 						if (!*arg)
 						{
@@ -560,7 +565,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 								goto abort;
 							}
 						}
-						if (!do_opt_arg(arg, op, conf))
+						if (!do_opt_value(arg, op, conf))
 							goto abort;
 						break; /* no more options after an argument */
 					}
