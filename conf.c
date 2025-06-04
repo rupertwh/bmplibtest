@@ -482,11 +482,8 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 
 				for (i = 0, op = opnum; i < opnum; i++)
 				{
-					if (s_options[i].longname &&
-					    strict_strcmp(
-					        arg, s_options[i].longname,
-					        MAX(comparelen,
-					            capped_strlen(s_options[i].longname))))
+					if (s_options[i].longname && strict_strcmp(arg, s_options[i].longname,
+					                             MAX(comparelen, capped_strlen(s_options[i].longname))))
 					{
 						op = i;
 						break;
@@ -503,8 +500,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					/* long option with argument */
 					if (!equalsign)
 					{
-						fprintf(stderr, "Option --%s needs an argument!\n",
-						        s_options[op].longname);
+						fprintf(stderr, "Option --%s needs an argument!\n", s_options[op].longname);
 						goto abort;
 					}
 					arg = equalsign + 1;
@@ -517,8 +513,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					/* long option without argument */
 					if (equalsign)
 					{
-						fprintf(stderr, "Option --%s cannot have an argument!\n",
-						        s_options[op].longname);
+						fprintf(stderr, "Option --%s cannot have an argument!\n", s_options[op].longname);
 						goto abort;
 					}
 
@@ -533,8 +528,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 				{
 					for (i = 0, op = opnum; i < opnum; i++)
 					{
-						if (s_options[i].shortname ==
-						    (int)(unsigned char)*arg)
+						if (s_options[i].shortname == *(unsigned char*)arg)
 						{
 							op = i;
 							break;
@@ -542,8 +536,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 					}
 					if (opnum == op)
 					{
-						fprintf(stderr, "Unknown option -%c\n",
-						        (int)(unsigned char)*arg);
+						fprintf(stderr, "Unknown option -%c\n", *(unsigned char*)arg);
 						goto abort;
 					}
 
@@ -555,8 +548,7 @@ struct Conf *conf_parse_cmdline(int argc, char **argv)
 							if (!next_arg(&arg))
 							{
 								fprintf(stderr, "Missing argument for -%c option\n",
-								        s_options[op]
-								            .shortname);
+								                                     s_options[op].shortname);
 								goto abort;
 							}
 						}
@@ -596,9 +588,9 @@ abort:
 static bool add_to_str_list(const char *arg)
 {
 	int             sz;
-	struct Confstr *str;
+	struct Confstr *item;
 
-	sz = sizeof *str + capped_strlen(arg) + 1;
+	sz = sizeof *item + capped_strlen(arg) + 1;
 
 	s_used = ALIGN_TO_POINTER(s_used);
 
@@ -608,13 +600,13 @@ static bool add_to_str_list(const char *arg)
 		exit(1);
 	}
 
-	str     = (struct Confstr *)(s_buffer + s_used);
+	item    = (struct Confstr *)(s_buffer + s_used);
 	s_used += sz;
 
-	*s_listtail = str;
-	s_listtail  = &str->next;
+	strcpy(item->str, arg);
 
-	strcpy(str->str, arg);
+	*s_listtail = item;
+	s_listtail  = &item->next;
 
 	return true;
 }

@@ -21,7 +21,7 @@
 struct Confstr
 {
 	struct Confstr *next;
-	char            str[1];
+	char            str[];
 };
 
 struct Conf
