@@ -66,6 +66,7 @@ struct Option
 };
 
 static MAY_BE_UNUSED void add_opt_str(char **result, const char *arg);
+static MAY_BE_UNUSED bool add_opt_num(long *result, const char *arg);
 static int                shortname(enum Optnum op);
 static const char        *longname(enum Optnum op);
 static const char        *envname(enum Optnum op);
@@ -120,7 +121,7 @@ static bool do_opt(int op, struct Conf *conf)
 
 static bool do_opt_value(const char *arg, int op, struct Conf *conf)
 {
-	char *endptr = NULL;
+	bool numarg_ok = true;
 
 	if (!*arg)
 	{
@@ -151,15 +152,22 @@ static bool do_opt_value(const char *arg, int op, struct Conf *conf)
 		add_opt_str(&conf->tmpdir, arg);
 		break;
 
+#ifdef NEVER
+	/* template for numerical arg (long) */
+	case OP_XXX:
+		numarg_ok = add_opt_num(&conf->xxx, arg);
+		break;
+#endif
+
 	default:
 		printf("Something is broken\n");
 		exit(1);
 	}
 
-	if (endptr && *endptr != '\0')
+	if (!numarg_ok)
 	{
 		fprintf(stderr, "Invalid numerical argument to --%s option: '%s'\n",
-		        longname(op), arg);
+		                                                     longname(op), arg);
 		return false;
 	}
 
@@ -173,6 +181,7 @@ static bool do_opt_value(const char *arg, int op, struct Conf *conf)
 static void load_env_strings(struct Conf *conf)
 {
 	char *str;
+	bool numarg_ok = true;
 
 	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++)
 	{
@@ -203,9 +212,23 @@ static void load_env_strings(struct Conf *conf)
 			add_opt_str(&conf->tmpdir, str);
 			break;
 
+#ifdef NEVER
+		/* template for numerical arg (long) */
+		case OP_XXX:
+			numarg_ok = add_opt_num(&conf->xxx, str);
+			break;
+#endif
+
 		default:
 			printf("Warning: env %s not used\n", s_options[i].envname);
 			break;
+		}
+
+		if (!numarg_ok)
+		{
+			fprintf(stderr, "Invalid numerical argument in environment string (%s): '%s'\n",
+			                                      s_options[i].envname, str);
+			exit(1);
 		}
 	}
 }
@@ -216,6 +239,7 @@ static void load_env_strings(struct Conf *conf)
 
 static void load_default_strings(struct Conf *conf)
 {
+	bool numarg_ok = true;
 
 	for (int i = 0; i < (int)ARRAY_SIZE(s_options); i++)
 	{
@@ -244,10 +268,25 @@ static void load_default_strings(struct Conf *conf)
 			add_opt_str(&conf->tmpdir, s_options[i].defaultstr);
 			break;
 
+#ifdef NEVER
+		/* template for numerical arg (long) */
+		case OP_XXX:
+			numarg_ok = add_opt_num(&conf->xxx, s_options[i].defaultstr);
+			break;
+#endif
+
 		default:
 			printf("Warning: default str for %s not used\n",
 			       s_options[i].longname);
 			break;
+		}
+
+		if (!numarg_ok)
+		{
+			fprintf(stderr, "Invalid numerical default argument for '--%s': '%s'\n",
+			                                               longname(s_options[i].op),
+			                                               s_options[i].defaultstr);
+			exit(1);
 		}
 	}
 }
@@ -389,6 +428,20 @@ static MAY_BE_UNUSED void add_opt_str(char **result, const char *str)
 		exit(1);
 	}
 	strcpy(*result, str);
+}
+
+
+/********************************************************
+ * 	add_opt_num
+ *******************************************************/
+
+static MAY_BE_UNUSED bool add_opt_num(long *result, const char *arg)
+{
+	char *endptr = NULL;
+
+	*result = strtol(arg, &endptr, 10);
+
+	return endptr && (*endptr == 0);
 }
 
 /********************************************************
