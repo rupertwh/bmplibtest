@@ -219,6 +219,20 @@ test (Load 32-bit RGB) {
     compare { }
 }
 
+# "questionable" files from BMP Suite with alpha from RLE
+
+test (Load 4-bit RLE with transparency) {
+    loadbmp {bmpsuite, q/pal4rletrns.bmp}
+    loadpng {ref, ref_4bitRLEtrans.png}
+    compare { }
+}
+
+test (Load 4-bit RLE with transparancy/cut) {
+    loadbmp {bmpsuite, q/pal4rlecut.bmp}
+    loadpng {ref, ref_4bitRLEcut.png}
+    compare { }
+}
+
 test (Load Huffman) {
     loadbmp {bmpsuite, q/pal1huffmsb.bmp}
     loadpng {ref, ref_8bit_2bw.png}
