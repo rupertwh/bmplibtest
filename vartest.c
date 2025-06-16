@@ -59,6 +59,7 @@ static bool            perform_addalpha(void);
 static inline uint16_t float_to_s2_13(double d);
 static inline double   s2_13_to_double(uint16_t s2_13);
 bool                   bmpresult_from_str(const char *str, BMPRESULT *res);
+const char* bmpresult_as_str(BMPRESULT result);
 bool        rendering_intent_from_str(const char *str, BMPINTENT *intent);
 static bool run_test(struct Command *cmd, int testnum);
 
@@ -343,6 +344,125 @@ static bool perform_loadraw(struct Argument *args)
 	return loadraw(path);
 }
 
+
+struct ResultRead
+{
+	BMPRESULT loadinfo;
+	BMPRESULT arrayinfo;
+	int       arraynum;
+	bool      arraynum_explicit;
+	BMPRESULT loadicc;
+	BMPRESULT set64bit;
+	BMPRESULT setformat;
+	int       numcolors;
+	bool      numcolors_explicit;
+	BMPRESULT loadpalette;
+	BMPRESULT loadimage;
+};
+
+bool parse_expected_read_result(struct ResultRead *results, char *optvalue)
+{
+	char *eq, *name, *value, *endptr = NULL;
+
+	name = optvalue;
+	eq = strchr(name, '=');
+	if (!eq)
+	{
+		printf("loadbmp: expect-option w/o value '%s'\n", optvalue);
+		return false;
+	}
+	*eq = 0;
+	value = eq + 1;
+	if (!*value)
+	{
+		printf("loadbmp: empty value for expect optin %s\n", name);
+		return false;
+	}
+
+	if (!strcmp(name, "loadinfo"))
+	{
+		if (!bmpresult_from_str(value, &results->loadinfo))
+		{
+			printf("loadbmp: invalid expected loadinfo result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "arrayinfo"))
+	{
+		if (!bmpresult_from_str(value, &results->arrayinfo))
+		{
+			printf("loadbmp: invalid expected arrayinfo result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "arraynum"))
+	{
+		results->arraynum = strtol(value, &endptr, 10);
+		if (endptr && *endptr != '\0')
+		{
+			printf("loadbmp: invalid arranum value %s\n", value);
+			return false;
+		}
+		results->arraynum_explicit = true;
+	}
+	else if (!strcmp(name, "loadicc"))
+	{
+		if (!bmpresult_from_str(value, &results->loadicc))
+		{
+			printf("loadbmp: invalid expected loadicc result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "set64bit"))
+	{
+		if (!bmpresult_from_str(value, &results->set64bit))
+		{
+			printf("loadbmp: invalid expected set64bit result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "setformat"))
+	{
+		if (!bmpresult_from_str(value, &results->setformat))
+		{
+			printf("loadbmp: invalid expected setformat result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "numcolors"))
+	{
+		results->numcolors = strtol(value, &endptr, 10);
+		if (endptr && *endptr != '\0')
+		{
+			printf("loadbmp: invalid numcolors value %s\n", value);
+			return false;
+		}
+		results->numcolors_explicit = true;
+	}
+	else if (!strcmp(name, "loadpalette"))
+	{
+		if (!bmpresult_from_str(value, &results->loadpalette))
+		{
+			printf("loadbmp: invalid expected loadpalette result '%s'.", value);
+			return false;
+		}
+	}
+	else if (!strcmp(name, "loadimage"))
+	{
+		if (!bmpresult_from_str(value, &results->loadimage))
+		{
+			printf("loadbmp: invalid expected loadimage result '%s'.", value);
+			return false;
+		}
+	}
+	else {
+		printf("loadbmp: invalid expected result option '%s'\n", name);
+		return false;
+	}
+	return true;
+
+}
+
 static bool perform_loadbmp(struct Argument *args)
 {
 	bool          success = false;
@@ -368,9 +488,18 @@ static bool perform_loadbmp(struct Argument *args)
 	bool          index            = false;
 	bool          loadicc          = false;
 	bool          icc_loadonly     = false;
-	BMPRESULT     expected         = BMP_RESULT_OK;
 	BMPORIENT     orientation;
 	int           array_idx = -1;
+	struct ResultRead results = { .loadinfo    = BMP_RESULT_OK,
+	                              .arrayinfo   = BMP_RESULT_OK,
+	                              .loadicc     = BMP_RESULT_OK,
+	                              .set64bit    = BMP_RESULT_OK,
+	                              .setformat   = BMP_RESULT_OK,
+	                              .loadpalette = BMP_RESULT_OK,
+	                              .loadimage   = BMP_RESULT_OK,
+	                              .arraynum    = 0,
+	                              .numcolors   = 0,
+	                          };
 
 	if (args)
 	{
@@ -493,9 +622,8 @@ static bool perform_loadbmp(struct Argument *args)
 		}
 		else if (!strcmp(optname, "expect"))
 		{
-			if (!bmpresult_from_str(optvalue, &expected))
+			if (!parse_expected_read_result(&results, optvalue))
 			{
-				printf("loadbmp: invalid expected result '%s'.", optvalue);
 				goto abort;
 			}
 		}
@@ -548,33 +676,51 @@ static bool perform_loadbmp(struct Argument *args)
 	if (set_huff_t4black)
 		bmp_set_huffman_t4black_value(h, huff_t4black);
 
-	if ((res = bmpread_load_info(h)))
+	res = bmpread_load_info(h);
+	if (res != results.loadinfo)
 	{
-		if (res == BMP_RESULT_INSANE && insane)
-			bmpread_set_insanity_limit(h, bmpread_buffersize(h));
-		else if (res == BMP_RESULT_ARRAY)
+		printf("Unexpected result from bmpread_load_info():\n"
+			       "Expected: %s, have: %s\n", bmpresult_as_str(results.loadinfo), bmpresult_as_str(res));
+		if (res != BMP_RESULT_OK)
+				printf("(%s)\n", bmp_errmsg(h));
+		goto abort;
+	}
+
+	if (res == BMP_RESULT_INSANE)
+	{
+		if (insane)
 		{
-			if (array_idx < 0)
+			bmpread_set_insanity_limit(h, bmpread_buffersize(h));
+			res = bmpread_load_info(h);
+			if (res != BMP_RESULT_OK)
 			{
-				printf("File is a bitmap array, but no index given\n");
+				printf("set insanity limit, but: %s\n", bmp_errmsg(h));
 				goto abort;
 			}
 		}
 		else
 		{
-			success = (res == expected);
-			if (!success)
-				printf("%s\n", bmp_errmsg(h));
+			success = true;
 			goto abort;
 		}
 	}
-	else
+
+	if (res == BMP_RESULT_ARRAY && array_idx < 0)
 	{
-		if (array_idx > -1)
-		{
-			printf("Expected array\n");
-			goto abort;
-		}
+		printf("File is a bitmap array, but no index given\n");
+		goto abort;
+	}
+
+	if (res != BMP_RESULT_ARRAY && array_idx >= 0)
+	{
+		printf("Expected bitmap array\n");
+		goto abort;
+	}
+
+	if (res != BMP_RESULT_OK && res != BMP_RESULT_ARRAY)
+	{
+		success = true;
+		goto abort;
 	}
 
 	if (array_idx > -1)
@@ -583,6 +729,13 @@ static bool perform_loadbmp(struct Argument *args)
 
 		if (conf->verbose > 2)
 			printf("Bitmap array: %d images\n", n);
+
+		if (results.arraynum_explicit && n != results.arraynum)
+		{
+			printf("BMP array, expected %d images, have %d images\n", results.arraynum, n);
+			goto abort;
+		}
+
 		if (array_idx >= n)
 		{
 			printf("Invalid array index %d. (max is %d)\n", array_idx, n);
@@ -593,9 +746,18 @@ static bool perform_loadbmp(struct Argument *args)
 		harr = h;
 		h    = NULL;
 
-		if (bmpread_array_info(harr, &ai, array_idx))
+		res = bmpread_array_info(harr, &ai, array_idx);
+		if (res != results.arrayinfo)
 		{
+			printf("array_info: expected result %s, have %s\n",
+			                                 bmpresult_as_str(results.arrayinfo),
+			                                 bmpresult_as_str(res));
 			printf("%s\n", bmp_errmsg(harr));
+			goto abort;
+		}
+		else if (res != BMP_RESULT_OK)
+		{
+			success = true;
 			goto abort;
 		}
 
@@ -624,31 +786,56 @@ static bool perform_loadbmp(struct Argument *args)
 			printf("no valid profile in file\n");
 			goto abort;
 		}
-		if ((res = bmpread_load_iccprofile(h, &img->iccprofile)))
+		res = bmpread_load_iccprofile(h, &img->iccprofile);
+		if (res != results.loadicc)
 		{
-			success = (res == expected);
-			if (!success)
-				printf("%s\n", bmp_errmsg(h));
+			printf("load iccprofile: expected result %s, have %s\n",
+			                                          bmpresult_as_str(results.loadicc),
+			                                          bmpresult_as_str(res));
+			printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
+		else if (res != BMP_RESULT_OK)
+		{
+			success = true;
 			goto abort;
 		}
 		if (conf->verbose > 2)
 			printf("     Successfully loaded profile (size %lu bytes).\n",
-			       (unsigned long)img->iccprofile_size);
+			                                          (unsigned long)img->iccprofile_size);
 	}
 
 	if (set_conv64)
 	{
-		if (bmpread_set_64bit_conv(h, conv64))
+		res = bmpread_set_64bit_conv(h, conv64);
+		if (res != results.set64bit)
 		{
+			printf("set64bit: expected result %s have %s\n",
+			                                          bmpresult_as_str(results.set64bit),
+			                                          bmpresult_as_str(res));
 			printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
+		else if (res != BMP_RESULT_OK)
+		{
+			success = true;
 			goto abort;
 		}
 	}
 	if (set_format)
 	{
-		if (bmp_set_number_format(h, format))
+		res = bmp_set_number_format(h, format);
+		if (res != results.setformat)
 		{
+			printf("set format: expected result %s, have %s\n",
+			                                          bmpresult_as_str(results.setformat),
+			                                          bmpresult_as_str(res));
 			printf("%s\n", bmp_errmsg(h));
+			goto abort;
+		}
+		else if (res != BMP_RESULT_OK)
+		{
+			success = true;
 			goto abort;
 		}
 	}
@@ -658,13 +845,26 @@ static bool perform_loadbmp(struct Argument *args)
 	{
 		fflush(stdout);
 		img->numcolors = bmpread_num_palette_colors(h);
+		if (results.numcolors_explicit && img->numcolors != results.numcolors)
+		{
+			printf("num_palette_colors: expected %d colors, have %d\n",
+			                                          results.numcolors, (int)img->numcolors);
+			goto abort;
+		}
 		if (img->numcolors > 0)
 		{
-			if ((res = bmpread_load_palette(h, &img->palette)))
+			res = bmpread_load_palette(h, &img->palette);
+			if (res != results.loadpalette)
 			{
-				success = (res == expected);
-				if (!success)
-					printf("%s\n", bmp_errmsg(h));
+				printf("load palette: expected result %s, have %s\n",
+			                                          bmpresult_as_str(results.loadpalette),
+			                                          bmpresult_as_str(res));
+				printf("%s\n", bmp_errmsg(h));
+				goto abort;
+			}
+			else if (res != BMP_RESULT_OK)
+			{
+				success = true;
 				goto abort;
 			}
 		}
@@ -690,33 +890,37 @@ static bool perform_loadbmp(struct Argument *args)
 			int real_y = orientation == BMP_ORIENT_TOPDOWN ? y : img->height - y - 1;
 			line = img->buffer + (uint64_t)real_y * img->width * img->channels *
 			                         img->bitsperchannel / 8;
-			if ((res = bmpread_load_line(h, &line)))
+			res = bmpread_load_line(h, &line);
+			if (res != results.loadimage)
 			{
-				success = (res == expected);
-				if (!success)
-					printf("%s\n", bmp_errmsg(h));
+				printf("load line: expected result %s, have %s\n",
+			                                          bmpresult_as_str(results.loadimage),
+			                                          bmpresult_as_str(res));
+				printf("%s\n", bmp_errmsg(h));
 				goto abort;
 			}
-			else
+			else if (res != BMP_RESULT_OK)
 			{
 				success = true;
+				goto abort;
 			}
 		}
 	}
 	else
 	{
-		if ((res = bmpread_load_image(h, &img->buffer)))
+		res = bmpread_load_image(h, &img->buffer);
+		if (res != results.loadimage)
 		{
-			success = (res == expected);
-			if (!success)
-			{
-				printf("%s\n", bmp_errmsg(h));
-				goto abort;
-			}
+			printf("load image: expected result %s, have %s\n",
+			                                          bmpresult_as_str(results.loadimage),
+			                                          bmpresult_as_str(res));
+			printf("%s\n", bmp_errmsg(h));
+			goto abort;
 		}
-		else
+		else if (res != BMP_RESULT_OK)
 		{
 			success = true;
+			goto abort;
 		}
 	}
 
@@ -732,7 +936,7 @@ static bool perform_loadbmp(struct Argument *args)
 		goto abort;
 
 	img = NULL;
-	// success = (expected == BMP_RESULT_OK);
+	success = true;
 
 	/* fall through */
 abort:
@@ -2293,11 +2497,29 @@ bool bmpresult_from_str(const char *str, BMPRESULT *res)
 	else if (!strcmp(str, "BMP_RESULT_INSANE"))    *res = BMP_RESULT_INSANE;
 	else if (!strcmp(str, "BMP_RESULT_PNG"))       *res = BMP_RESULT_PNG;
 	else if (!strcmp(str, "BMP_RESULT_JPEG"))      *res = BMP_RESULT_JPEG;
+	else if (!strcmp(str, "BMP_RESULT_ARRAY"))     *res = BMP_RESULT_ARRAY;
 	else if (!strcmp(str, "BMP_RESULT_ERROR"))     *res = BMP_RESULT_ERROR;
 	else
 		return false;
 
 	return true;
+}
+
+const char* bmpresult_as_str(BMPRESULT result)
+{
+	const char *name = "(unknown)";
+
+	switch (result) {
+		case BMP_RESULT_OK:        name = "BMP_RESULT_OK"; break;
+		case BMP_RESULT_INVALID:   name = "BMP_RESULT_INVALID"; break;
+		case BMP_RESULT_TRUNCATED: name = "BMP_RESULT_TRUNCATED"; break;
+		case BMP_RESULT_PNG:       name = "BMP_RESULT_PNG"; break;
+		case BMP_RESULT_INSANE:    name = "BMP_RESULT_INSANE"; break;
+		case BMP_RESULT_JPEG:      name = "BMP_RESULT_JPEG"; break;
+		case BMP_RESULT_ARRAY:     name = "BMP_RESULT_ARRAY"; break;
+		case BMP_RESULT_ERROR:     name = "BMP_RESULT_ERROR"; break;
+	}
+	return name;
 }
 
 bool rendering_intent_from_str(const char *str, BMPINTENT *intent)

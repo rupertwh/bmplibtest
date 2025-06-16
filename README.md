@@ -82,12 +82,29 @@ Load a BMP image onto the image stack.
 - `line: whole|line` Whether to read the whole image at once, or line-by-line.
 - `rgb: rgb|index` Whether to load indexed images as RGB or index + palette.
 - `undef: alpha|leave` Whether to make undefined pixels in RLE images
-  transparent. (adds an alpha channel to the loaded image)
+  transparent. (`alpha` adds an alpha channel to the loaded image)
 - `conv64: srgb|linear` How to convert (or not) 64bit gamma.
 - `format: int|float|s2.13` Specify number format for loaded image.
-- `insane: yes` Load images larger than bmplib's insanity limit.
-- `expect: <BMPRESULT>` Specify BMPRESULT error code to expect, e.g. `expect:
-  BMP_RESULT_PNG`
+- `insane: yes` Load images larger than bmplib's insanity limit. Must also
+  specify `expect: loadinfo=BMP_RESULT_INSANE`.
+- `expect: <name>=<value>` Specify result to expect from any of the bmplib
+  calls made while loading a bmp file. `name` specfies the call/operation,
+  `value` is the expected result. For the following calls, `value` specifies
+  any of the BMPRESULT return codes:
+  - `loadinfo`
+  - `arrayinfo`
+  - `loadicc`
+  - `set64bit`
+  - `setformat`
+  - `loadpalette`
+  - `loadimage`
+
+  For these two, `value` is an integer value:
+  - `numcolors`
+  - `arraynum`
+
+  E.g.: `expect: loadinfo=BMP_RESULT_INSANE` or `expect: arraynum=3`
+
 - `iccprofile: loadonly` Load an embedded ICC profile. (`loadonly` is currently
   the only option, might add `apply` in the future.)
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that

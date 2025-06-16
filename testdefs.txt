@@ -462,27 +462,27 @@ test (Test Huffman compression - t4-black=0) {
 }
 
 test (Embedded JPEG) {
-    loadbmp      {bmpsuite, q/rgb24jpeg.bmp, expect: BMP_RESULT_JPEG}
+    loadbmp      {bmpsuite, q/rgb24jpeg.bmp, expect: loadinfo=BMP_RESULT_JPEG}
 }
 
 test (Embedded PNG) {
-    loadbmp      {bmpsuite, q/rgb24png.bmp, expect: BMP_RESULT_PNG}
+    loadbmp      {bmpsuite, q/rgb24png.bmp, expect: loadinfo=BMP_RESULT_PNG}
 }
 
 test (Really big) {
-    loadbmp      {bmpsuite, b/reallybig.bmp, expect: BMP_RESULT_INSANE}
+    loadbmp      {bmpsuite, b/reallybig.bmp, expect: loadinfo=BMP_RESULT_INSANE}
 }
 
 test (Bad planes) {
-    loadbmp      {bmpsuite, b/badplanes.bmp, expect: BMP_RESULT_ERROR}
+    loadbmp      {bmpsuite, b/badplanes.bmp, expect: loadinfo=BMP_RESULT_ERROR}
 }
 
 test (Truncated) {
-    loadbmp      {bmpsuite, b/shortfile.bmp, expect: BMP_RESULT_TRUNCATED}
+    loadbmp      {bmpsuite, b/shortfile.bmp, expect: loadimage=BMP_RESULT_TRUNCATED}
 }
 
 test (Invalid pixels) {
-    loadbmp      {bmpsuite, b/pal8badindex.bmp, expect: BMP_RESULT_INVALID}
+    loadbmp      {bmpsuite, b/pal8badindex.bmp, expect: loadimage=BMP_RESULT_INVALID}
 }
 
 test ( load ICC profile ) {
@@ -524,21 +524,21 @@ test (OS/2 b/w pointer) {
 
 
 test (OS/2 color icon BA - 0) {
-    loadbmp   { sample, icon.ico, array:0 }
+    loadbmp   { sample, icon.ico, expect: loadinfo=BMP_RESULT_ARRAY, array:0 }
     savebmp   { icon-1.bmp }
 }
 
 test (OS/2 color icon BA - 1) {
-    loadbmp   { sample, icon.ico, array:1 }
+    loadbmp   { sample, icon.ico, expect: loadinfo=BMP_RESULT_ARRAY, array:1 }
     savebmp   { icon-2.bmp }
 }
 
 test (OS/2 color icon BA - 2) {
-    loadbmp   { sample, icon.ico, array:2 }
+    loadbmp   { sample, icon.ico, expect: loadinfo=BMP_RESULT_ARRAY, array:2 }
     savebmp   { icon-3.bmp }
 }
 
 test (OS/2 color icon BA - 3) {
-    loadbmp   { sample, icon.ico, array:3 }
+    loadbmp   { sample, icon.ico, expect: loadinfo=BMP_RESULT_ARRAY, array:3 }
     savebmp   { icon-4.bmp }
 }
