@@ -1944,41 +1944,62 @@ static void set_exposure(double fstops)
 
 static bool perform_convertformat(struct Argument *args)
 {
-	const char *to   = NULL;
+	const char *format = NULL;
 	int         bits = 0;
 
-	if (args)
+	for (struct Argument *arg = args; arg; arg = arg->next)
 	{
-		to   = args->argname;
-		args = args->next;
-	}
-	if (args)
-	{
-		bits = atol(args->argname);
-		args = args->next;
+		char *optname  = arg->argname;
+		char *optvalue = arg->argvalue;
+
+		assert (optname != NULL);
+
+		if (!strcmp(optname, "format"))
+		{
+			format = optvalue;
+		}
+		else if (!strcmp(optname, "bits"))
+		{
+			char *endptr = NULL;
+			bits = strtol(optvalue, &endptr, 10);
+			if (endptr && *endptr != '\0')
+			{
+				if (conf->verbose > -2)
+					printf("Invalid bits specification '%s', must be an integer.\n", optvalue);
+				return false;
+			}
+		}
+		else
+		{
+			if (conf->verbose > -2)
+				printf("convertformat: unkown option '%s'\n", optname);
+			return false;
+		}
 	}
 
-	if (!(to && *to))
+	if (!(format && *format))
 	{
-		printf("convertformat: need format\n");
+		if (conf->verbose > -2)
+			printf("convertformat: need format\n");
 		return false;
 	}
 
-	if (!strcmp(to, "float"))
+	if (!strcmp(format, "float"))
 	{
 		convert_format(BMP_FORMAT_FLOAT, 0);
 	}
-	else if (!strcmp(to, "s2.13"))
+	else if (!strcmp(format, "s2.13"))
 	{
 		convert_format(BMP_FORMAT_S2_13, 0);
 	}
-	else if (!strcmp(to, "int"))
+	else if (!strcmp(format, "int"))
 	{
 		convert_format(BMP_FORMAT_INT, bits);
 	}
 	else
 	{
-		printf("Unknown conversion to %s\n", to);
+		if (conf->verbose > -2)
+			printf("Unknown conversion to %s\n", format);
 		return false;
 	}
 	return true;

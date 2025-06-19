@@ -253,7 +253,7 @@ test (Load Huffman - explicit t4black=0) {
 
 test (Load Huffman as float) {
     loadbmp       {bmpsuite, q/pal1huffmsb.bmp, format: float}
-    convertformat {int, 8}
+    convertformat {format: int, bits: 8}
     loadpng       {ref, ref_8bit_2bw.png}
     compare       { }
 }
@@ -270,7 +270,7 @@ test (Load RLE24) {
 
 test (Load 64-bit) {
     loadbmp       {bmpsuite, q/rgba64.bmp, format: float}
-    convertformat {int, 8}
+    convertformat {format: int, bits:8}
     savebmp       {rgba64_to_16bit.bmp}
 }
 
@@ -325,7 +325,7 @@ test (Test HDR 64-bit) {
     # Load PNG and save as 64bit BMP with exposure +2
     #
     loadpng       {sample, almdudler.png}
-    convertformat {float, 0}
+    convertformat {format: float}
     convertgamma  {from: srgb, to: linear}
     exposure      {fstops: 2}
     savebmp       {hdr-64bit.bmp, 64bit: yes}
@@ -334,7 +334,7 @@ test (Test HDR 64-bit) {
     #
     exposure      {fstops: -2}
     convertgamma  {from: linear, to: srgb}
-    convertformat {int, 8}
+    convertformat {format: int, bits: 8}
     addalpha      { }
     #
     # Load the 64bit BMP that we saved above
@@ -346,17 +346,17 @@ test (Test HDR 64-bit) {
     #
     exposure      {fstops: -2}
     convertgamma  {from: linear, to: srgb}
-    convertformat {int, 8}
+    convertformat {format: int, bits: 8}
     compare       {fuzz: 1}
 }
 
 test (create dark 16-bit) {
     loadpng       {sample, almdudler.png}
-    convertformat {float, 0}
+    convertformat {format: float}
     convertgamma  {from: srgb, to: linear}
     exposure      {fstops: -8}
     convertgamma  {from: linear, to: srgb}
-    convertformat {int, 16}
+    convertformat {format: int, bits: 16}
     savebmp       {dark16.bmp, outbits: r10g11b11a0}
 }
 

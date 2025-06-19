@@ -13,10 +13,13 @@ The test parser is very simplisitic, no quoting, escaping or even nesting.
 Leading and trailing white space around commands, options, and their values is
 ignored.
 
-Every test consists of a series of commands, enclosed in a `test { ... }` block.
-A test description can be added in parentheses between the `test` keyword and the opening curly brace, e.g.: `test (Load a RGB24 file) { ... }`
+Every test consists of a series of commands, enclosed in a `test
+{ ... }` block. A test description can be added in parentheses between the
+`test` keyword and the opening curly brace, e.g.: `test (Load a RGB24 file)
+{ ... }`
 
-Commands may be (but don't have to be) separated from each other with any amount and type of white space.
+Commands may be (but don't have to be) separated from each other with any
+amount and type of white space.
 
 Comments can be added with `#`.
 
@@ -79,7 +82,8 @@ Load a BMP image onto the image stack.
 
 ##### Optional arguments:
 
-- `line: whole|line` Whether to read the whole image at once, or line-by-line.
+- `line: whole|line` Whether to read the whole image at once, or
+  line-by-line.
 - `rgb: rgb|index` Whether to load indexed images as RGB or index + palette.
 - `undef: alpha|leave` Whether to make undefined pixels in RLE images
   transparent. (`alpha` adds an alpha channel to the loaded image)
@@ -105,8 +109,8 @@ Load a BMP image onto the image stack.
 
   E.g.: `expect: loadinfo=BMP_RESULT_INSANE` or `expect: arraynum=3`
 
-- `iccprofile: loadonly` Load an embedded ICC profile. (`loadonly` is currently
-  the only option, might add `apply` in the future.)
+- `iccprofile: loadonly` Load an embedded ICC profile. (`loadonly` is
+  currently the only option, might add `apply` in the future.)
 - `huff-t4black: 0|1` Specify numerical value (index into color palette) that
   ITU-T T.4 "black" corresonds to.
 
@@ -116,7 +120,8 @@ Load a BMP image onto the image stack.
 
 Save the topmost image on the stack to a BMP file.
 
-All files are witten to the directory specified by the `--tmp` command line option or the `BMPLIBTEST_TMPDIR` environment variable.
+All files are witten to the directory specified by the `--tmp` command line
+option or the `BMPLIBTEST_TMPDIR` environment variable.
 
 ```savebmp { <file>, ... }```
 
@@ -127,12 +132,12 @@ All files are witten to the directory specified by the `--tmp` command line opti
 ##### Optional arguments:
 
 - `format: int|float|s2.13` Number format used to supply image data to bmplib.
-  Note: the image will be converted to the specified format before saving, and
-  the converted image will be left on the stack. Use duplicate{}/delete{} to
-  preserve the original. When specifying `format:int`, `bufferbits` must be
-  set, as well.
-- `bufferbits: <n>` number of bits when specifying `format:int`. Will otherwise
-  be ignored.
+  Note: the image will be converted to the specified format before saving,
+  and the converted image will be left on the stack. Use duplicate{}/delete
+  {} to preserve the original. When specifying `format:int`, `bufferbits`
+  must be set, as well.
+- `bufferbits: <n>` number of bits when specifying `format:int`. Will
+  otherwise be ignored.
 - `rle: auto|rle8|none` Which RLE compression to use. `auto` selects one from
   RLE4, RLE8, RLE24, or Huffman-1D, depending on the supplied image data
   (and the `allow`-option, see below).
@@ -189,8 +194,8 @@ identical.
 ```loadraw { <dir>, <file> }```
 
 Load a raw file to make `rawcompare` comparisons with known values. Raw files
-are not pushed onto the image stack. There can only be one raw file loaded at a
-time.
+are not pushed onto the image stack. There can only be one raw file loaded at
+a time.
 
 Alternatively, as a shortcut,  `loadraw` can be specified as an argument to
 `savebmp` (s.a.). The result is the same as explicitly loading it with
@@ -203,8 +208,8 @@ Alternatively, as a shortcut,  `loadraw` can be specified as an argument to
 ```rawcompare { offset: <offset>, size: <size>, bytes: <bytes> }```
 
 Compare portions of the last file loaded with `loadraw` against the specified
-values. `offset` and `size` specify where in the file and how many bytes are to
-be compared. `bytes` is a string of hexadecimal numbers, e.g.:
+values. `offset` and `size` specify where in the file and how many bytes are
+to be compared. `bytes` is a string of hexadecimal numbers, e.g.:
 
 ```rawcompare { offset: 0, size: 2, bytes: 424d }```
 
@@ -260,11 +265,12 @@ Convert the top image on the stack to the specified gamma curve.
 
 Convert the top image on the stack to the specified number format.
 
-```convertformat { <format>, <bits> }```
+```convertformat { format: <format>, bits: <bits> }```
 
-- `<format>` May be one of `int`, `float`, `s2.13`.
-- `<bits>` Only needed for `int` format, otherwise ignored. Must be one of 8,
-  16, 32.
+##### Mandatory arguments:
+- `format: <format>` May be one of `int`, `float`, `s2.13`.
+- `bits: <bits>` Only needed for `int` format, otherwise ignored. Must be one
+  of 8, 16, 32.
 
 -------------------------------------------------------------------------------
 
