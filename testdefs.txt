@@ -173,7 +173,7 @@ test (Load 24-bit RGB + Save) {
     loadpng {ref, ref_8bit_255c.png}
     compare { }
     savebmp {rgb24out.bmp, loadraw }
-    rawcompare {14, 4, 28000000  }
+    rawcompare {offset: 14, size: 4, bytes: 28000000  }
     loadbmp {tmp, rgb24out.bmp}
     compare { }
 }
@@ -183,7 +183,7 @@ test (Load 24-bit RGB line-by-line + Save) {
     loadpng {ref, ref_8bit_255c.png}
     compare { }
     savebmp {rgb24out-line.bmp, line: line, loadraw }
-    rawcompare {14, 4, 28000000  }
+    rawcompare {offset: 14, size: 4, bytes: 28000000  }
     loadbmp {tmp, rgb24out-line.bmp}
     compare { }
 }
@@ -262,9 +262,9 @@ test (Load RLE24) {
     loadbmp {bmpsuite, q/rgb24rle24.bmp, undef: leave}
     savebmp {rle24.bmp, loadraw}
     # header size
-    rawcompare {14, 4, 28000000  }
+    rawcompare {offset: 14, size: 4, bytes: 28000000  }
     # compression 0=BI_RGB
-    rawcompare { 30, 4, 00000000 }
+    rawcompare {offset: 30, size: 4, bytes: 00000000 }
 
 }
 
@@ -364,7 +364,7 @@ test (Save big Huffman) {
     loadbmp {sample, sw-big.bmp, rgb: index}
     savebmp {sw-huffout.bmp, rle: auto, allow: huff, loadraw}
     # header size = 64
-    rawcompare {14, 4, 40000000  }
+    rawcompare {offset: 14, size: 4, bytes: 40000000  }
 }
 
 test (Save big Huffman as RGB) {
@@ -452,9 +452,9 @@ test (Test Huffman compression - t4-black=0) {
     savebmp {text-bw-t4-bg1.bmp, rle: auto, allow: huff, huff-fgidx: 0,
              huff-t4black: 0, loadraw }
     # bitcount
-    rawcompare { 28, 2, 0100 }
+    rawcompare {offset: 28, size: 2, bytes: 0100 }
     # compression
-    rawcompare { 30, 4, 03000000 }
+    rawcompare { offset: 30, size: 4, bytes: 03000000 }
     loadbmp {tmp, text-bw-t4-huff.bmp, rgb: index, huff-t4black: 0}
     compare {}
     delete  {}
@@ -497,14 +497,14 @@ test ( write ICC profile ) {
     loadbmp    { tmp, rgb24prof.bmp, iccprofile: loadonly}
     savebmp    { rgb24prof2.bmp, iccprofile: embed, loadraw, intent: GRAPHICS }
 
-    rawcompare { 126, 4, 7c600000 } # profile offset
-    rawcompare { 122, 4, 02000000 } # rendering intent:
+    rawcompare { offset: 126, size: 4, bytes: 7c600000 } # profile offset
+    rawcompare { offset: 122, size: 4, bytes: 02000000 } # rendering intent:
 }
 
 test ( write rendering intent w/o profile ) {
     loadbmp    { bmpsuite, g/rgb24.bmp }
     savebmp    { intent.bmp, loadraw, intent: IMAGES }
-    rawcompare { 122, 4, 04000000 }
+    rawcompare { offset: 122, size: 4, bytes: 04000000 }
 }
 
 test (OS/2 color icon) {

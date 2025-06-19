@@ -189,7 +189,7 @@ Alternatively, as a shortcut,  `loadraw` can be specified as an argument to `sav
 
 #### `rawcompare`
 
-```rawcompare { <offset>, <size>, <bytes> }```
+```rawcompare { offset: <offset>, size: <size>, bytes: <bytes> }```
 
 Compare portions of the last file loaded with `loadraw` against the specified
 values. `offset` and `size` specify where in the file and how many bytes are to

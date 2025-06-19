@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <assert.h>
 #include <math.h>
 
 #include <png.h>
@@ -1344,20 +1345,22 @@ static bool perform_rawcompare(struct Argument *args)
 	int         size, byte;
 	uint8_t     bytes[maxbytes];
 
-	if (args)
+	for (struct Argument *arg = args; arg; arg = arg->next)
 	{
-		offsetstr = args->argname;
-		args      = args->next;
-		if (args)
-		{
-			sizestr = args->argname;
-			args    = args->next;
-		}
-		if (args)
-		{
-			hexstr = args->argname;
-			args   = args->next;
-		}
+		char *optname  = arg->argname;
+		char *optvalue = arg->argvalue;
+
+		assert (optname != NULL);
+
+		if (!optvalue)
+			optvalue = "";
+
+		if (!strcmp(optname, "offset"))
+			offsetstr = optvalue;
+		else if (!strcmp(optname, "size"))
+			sizestr = optvalue;
+		else if (!strcmp(optname, "bytes"))
+			hexstr = optvalue;
 	}
 
 	if (!(hexstr && *hexstr))
