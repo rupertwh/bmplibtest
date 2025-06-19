@@ -285,7 +285,7 @@ test (Save 32-bit RGB - load as float) {
 
 test (Save 64-bit RGB) {
     loadbmp      {bmpsuite, g/rgb32.bmp}
-    convertgamma {srgb, linear}
+    convertgamma {from: srgb, to: linear}
     savebmp      {rgb64.bmp, 64bit: yes}
 }
 
@@ -301,13 +301,13 @@ test (Load 64-bit RGB) {
 
 test (Load 64-bit RGB float linear + convert) {
     loadbmp      {bmpsuite, q/rgba64.bmp, format: float, conv64: linear}
-    convertgamma {linear, srgb}
+    convertgamma {from: linear, to: srgb}
     savebmp      {rgb64fltlin-to-24.bmp, format: int, bufferbits: 8}
 }
 
 test (Load 64-bit RGB s2.13 linear + convert) {
     loadbmp      {bmpsuite, q/rgba64.bmp, format: s2.13, conv64: linear}
-    convertgamma {linear, srgb}
+    convertgamma {from: linear, to: srgb}
     savebmp      {rgb64s2.13lin-to-24.bmp, format: int, bufferbits: 8}
 }
 
@@ -326,14 +326,14 @@ test (Test HDR 64-bit) {
     #
     loadpng       {sample, almdudler.png}
     convertformat {float, 0}
-    convertgamma  {srgb, linear}
+    convertgamma  {from: srgb, to: linear}
     exposure      {fstops: 2}
     savebmp       {hdr-64bit.bmp, 64bit: yes}
     #
     # Reset exposure and convert to int8 and add alpha channel
     #
     exposure      {fstops: -2}
-    convertgamma  {linear, srgb}
+    convertgamma  {from: linear, to: srgb}
     convertformat {int, 8}
     addalpha      { }
     #
@@ -345,7 +345,7 @@ test (Test HDR 64-bit) {
     # allowing slight rounding differences with 'fuzz: 1'
     #
     exposure      {fstops: -2}
-    convertgamma  {linear, srgb}
+    convertgamma  {from: linear, to: srgb}
     convertformat {int, 8}
     compare       {fuzz: 1}
 }
@@ -353,9 +353,9 @@ test (Test HDR 64-bit) {
 test (create dark 16-bit) {
     loadpng       {sample, almdudler.png}
     convertformat {float, 0}
-    convertgamma  {srgb, linear}
+    convertgamma  {from: srgb, to: linear}
     exposure      {fstops: -8}
-    convertgamma  {linear, srgb}
+    convertgamma  {from: linear, to: srgb}
     convertformat {int, 16}
     savebmp       {dark16.bmp, outbits: r10g11b11a0}
 }

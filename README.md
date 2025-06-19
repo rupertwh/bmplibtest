@@ -77,7 +77,7 @@ Load a BMP image onto the image stack.
   (see `--help`)
 - `<file>` the file name. May include subdirectories, e.g. "g/test.bmp".
 
-##### Optional (named) arguments:
+##### Optional arguments:
 
 - `line: whole|line` Whether to read the whole image at once, or line-by-line.
 - `rgb: rgb|index` Whether to load indexed images as RGB or index + palette.
@@ -116,13 +116,15 @@ Load a BMP image onto the image stack.
 
 Save the topmost image on the stack to a BMP file.
 
+All files are witten to the directory specified by the `--tmp` command line option or the `BMPLIBTEST_TMPDIR` environment variable.
+
 ```savebmp { <file>, ... }```
 
 ##### Mandatory (positional) arguments:
 
 - `<file>` the file name. May include subdirectories, e.g. "abc/test.bmp".
 
-##### Optional (named) arguments:
+##### Optional arguments:
 
 - `format: int|float|s2.13` Number format used to supply image data to bmplib.
   Note: the image will be converted to the specified format before saving, and
@@ -159,6 +161,13 @@ Load a PNG image onto the image stack.
 
 ```loadpng { <dir>, <file> }```
 
+##### Mandatory (positional) arguments:
+
+- `<dir>` must be one of the lables "sample", "ref", or "tmp". The actual path
+  name is defined via command line options or environment variables
+  (see `--help`)
+- `<file>` the file name. May include subdirectories.
+
 -------------------------------------------------------------------------------
 
 #### `compare`
@@ -168,7 +177,7 @@ identical.
 
 ```compare { fuzz: <n> }```
 
-##### Optional (named) arguments:
+##### Optional arguments:
 
 - `fuzz: <n>` Allow a difference of `n` between pixel values.
 
@@ -183,7 +192,9 @@ Load a raw file to make `rawcompare` comparisons with known values. Raw files
 are not pushed onto the image stack. There can only be one raw file loaded at a
 time.
 
-Alternatively, as a shortcut,  `loadraw` can be specified as an argument to `savebmp` (s.a.). The result is the same as explicitly loading it with `loadraw{}`.
+Alternatively, as a shortcut,  `loadraw` can be specified as an argument to
+`savebmp` (s.a.). The result is the same as explicitly loading it with
+`loadraw{}`.
 
 -------------------------------------------------------------------------------
 
@@ -195,7 +206,7 @@ Compare portions of the last file loaded with `loadraw` against the specified
 values. `offset` and `size` specify where in the file and how many bytes are to
 be compared. `bytes` is a string of hexadecimal numbers, e.g.:
 
-```rawcompare { 0, 2, 424d }```
+```rawcompare { offset: 0, size: 2, bytes: 424d }```
 
 N.B.: No endianess conversion or interpretation of bytes in the raw file takes
 place. Bytes must be listed in the order which they have in the file.
@@ -236,11 +247,12 @@ Add an alpha channel (full opacity) to the top image on the stack.
 
 Convert the top image on the stack to the specified gamma curve.
 
-```convertgamma { <from>, <to> }```
+```convertgamma { from: <gamma>, to: <gamma> }```
 
-##### Mandatory (positional) arguments:
+##### Mandatory arguments:
 
-- `<from>`, `<to>` may each be one of `srgb` or `linear`
+- `from: <gamma>` One of  `srgb` or `linear`
+- `to: <gamma>` One of  `srgb` or `linear`
 
 -------------------------------------------------------------------------------
 

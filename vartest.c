@@ -1659,7 +1659,7 @@ static bool perform_exposure(struct Argument *args)
 		else
 		{
 			if (conf->verbose > -2)
-				printf("exposure: unkown option %s\n", opt);
+				printf("exposure: unknown option %s\n", opt);
 			return false;
 		}
 		args = args->next;
@@ -1676,20 +1676,28 @@ static bool perform_convertgamma(struct Argument *args)
 {
 	const char *from = NULL, *to = NULL;
 
-	if (args)
+	for (struct Argument *arg = args; arg; arg = arg->next)
 	{
-		from = args->argname;
-		args = args->next;
-	}
-	if (args)
-	{
-		to   = args->argname;
-		args = args->next;
+		char *optname  = arg->argname;
+		char *optvalue = arg->argvalue;
+
+		assert (optname != NULL);
+
+		if (!strcmp(optname, "from"))
+			from = optvalue;
+		else if (!strcmp(optname, "to"))
+			to = optvalue;
+		else
+		{
+			if (conf->verbose > -2)
+				printf("convertgamma: unkown option '%s'\n", optname);
+			return false;
+		}
 	}
 
-	if (!(to && *to))
+	if (!(from && *from && to && *to))
 	{
-		printf("convertgamma: need from,to\n");
+		printf("convertgamma: need from, to\n");
 		return false;
 	}
 
@@ -1697,6 +1705,8 @@ static bool perform_convertgamma(struct Argument *args)
 	{
 		if (!strcmp(to, "linear"))
 			convert_srgb_to_linear();
+		else if (!strcmp(to, "srgb"))
+			return true;
 		else
 		{
 			printf("Unknown conversion to %s\n", to);
@@ -1707,6 +1717,8 @@ static bool perform_convertgamma(struct Argument *args)
 	{
 		if (!strcmp(to, "srgb"))
 			convert_linear_to_srgb();
+		else if (!strcmp(to, "linear"))
+			return true;
 		else
 		{
 			printf("Unknown conversion to %s\n", to);
